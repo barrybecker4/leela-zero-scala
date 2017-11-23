@@ -1,0 +1,18 @@
+description = 'Leela Zero in Scala'
+group = 'com.barrybecker4'
+version = '0.1'
+
+apply from: 'https://raw.github.com/barrybecker4/bb4-common/master/bb4.gradle'
+
+project.archivesBaseName = 'leela-zero-scala'
+mainClassName = 'com.barrybecker4.leelazero.FastBoard'
+
+jar {
+    archiveName = "${archivesBaseName}-${version}.jar"
+    manifest {
+        attributes 'Implementation-Title': description,
+                'Implementation-Version': version,
+                'provider': 'gradle',
+                'Main-Class': mainClassName
+    }
+}
