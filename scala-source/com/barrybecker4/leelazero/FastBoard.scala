@@ -12,7 +12,7 @@ object FastBoard {
   val MAX_BOARD_SIZE = 19
 
   /** highest existing square */
-  val MAXSQ : Int = (MAX_BOARD_SIZE + 2) * (MAX_BOARD_SIZE + 2)
+  val MAXSQ : Short = ((MAX_BOARD_SIZE + 2) * (MAX_BOARD_SIZE + 2)).toShort
 
   /** infinite score */
   val BIG = 10000000
@@ -33,7 +33,7 @@ object FastBoard {
   type MoveScore = Tuple2[Int, Float]    // movescore_t
 
   /**  bit masks to detect eyes on neighbors */
-  val EYE_MASK: Point = (               // s_eyemask
+  val EYE_MASK: Array[Int] = Array(               // s_eyemask
     4 * (1 << (NBR_SHIFT * BLACK)),
     4 * (1 << (NBR_SHIFT * WHITE))
   )
@@ -41,7 +41,7 @@ object FastBoard {
   val CINVERT = Array(WHITE, BLACK, EMPTY, INVALID) // s_cinvert
 }
 
-class FastBoard(boardSize: Int = MAX_BOARD_SIZE) {
+class FastBoard() {
 
   // int FastBoard::get_boardsize() return m_boardsize;
 
@@ -52,7 +52,7 @@ class FastBoard(boardSize: Int = MAX_BOARD_SIZE) {
   std::array<unsigned short, MAXSQ+1>    m_parent;      /* parent node of string */
   std::array<unsigned short, MAXSQ+1>    m_libs;        /* liberties per string parent */
   std::array<unsigned short, MAXSQ+1>    m_stones;      /* stones per string parent */
-  std::array<unsigned short, MAXSQ>      m_neighbours;  /* counts of neighboring stones */
+  std::array<unsigned short, MAXSQ>      m_neighbors;  /* counts of neighboring stones */
   std::array<int, 4>                     m_dirs;        /* movement directions 4 way */
   std::array<int, 8>                     m_extradirs;   /* movement directions 8 way */
   std::array<int, 2>                     m_prisoners;   /* prisoners per color */
@@ -65,30 +65,32 @@ class FastBoard(boardSize: Int = MAX_BOARD_SIZE) {
   int m_tomove;
   int m_maxsq;*/
 
+  private var boardSize: Int = MAX_BOARD_SIZE
   private var scoremoves_t: Seq[MoveScore] = _
-  private val m_maxsq = (boardSize + 2) * (boardSize + 2)
-  private val m_square = Array.ofDim[Byte](m_maxsq)    // Board contents          std::array<square_t, MAXSQ>
-  private val m_next = Array.ofDim[Short](m_maxsq + 1)  // next stone in string   std::array<unsigned short, MAXSQ+1>
-  private val m_parent = Array.ofDim[Short](m_maxsq + 1)  // parent node of string
-  private val m_libs = Array.ofDim[Short](m_maxsq + 1)  // liberties per string parent
-  private val m_stones = Array.ofDim[Short](m_maxsq + 1)  // stones per string parent
-  private val m_neighbours = Array.ofDim[Short](m_maxsq )  // counts of neighboring stones
-  private val m_dirs = Array.ofDim[Int](4)              // movement in 4 directions
-  private val m_extradirs = Array.ofDim[Int](8)         // movement in 8 directions
-  private val m_prisoners = Array.ofDim[Int](2)         // prisoners per color
-  private val m_totalstones = Array.ofDim[Int](2)       // total stones per color
+  private var m_maxsq: Short = _
+  private var m_square: Array[Byte] = _    // Board contents          std::array<square_t, MAXSQ>
+  private var m_next: Array[Short] = _     // next stone in string   std::array<unsigned short, MAXSQ+1>
+  private var m_parent: Array[Short] = _   // parent node of string
+  private var m_libs: Array[Short] = _     // liberties per string parent
+  private var m_stones: Array[Short] = _   // stones per string parent
+  private var m_neighbors: Array[Short] = _  // counts of neighboring stones
+  private var m_dirs: Array[Int] = _          // movement in 4 directions
+  private var m_extradirs: Array[Int] = _     // movement in 8 directions
+  private var m_prisoners: Array[Int] = _     // prisoners per color
+  private var m_totalstones: Array[Int] = _       // total stones per color
   private var m_critical: Seq[Int] = Seq()              // queue of critical points  (use dropRight to pop)
-  private val m_empty = Array.ofDim[Short](m_maxsq)     // empty squares
-  private val m_empty_idx = Array.ofDim[Short](m_maxsq)  // indices of empty squares
+  private var m_empty = Array.ofDim[Short](m_maxsq)     // empty squares
+  private var m_empty_idx = Array.ofDim[Short](m_maxsq)  // indices of empty squares
   private var m_empty_cnt: Int = 0
+  private var m_tomove: Byte = 0
 
-  def getVertex(x: Int, y: Int): Int = {
+  def getVertex(x: Int, y: Int): Short = {
     assert(x >= 0 && x < MAX_BOARD_SIZE)
     assert(y >= 0 && y < MAX_BOARD_SIZE)
     assert(x >= 0 && x < boardSize)
     assert(y >= 0 && y < boardSize)
 
-    val vertex: Int = ((y + 1) * (boardSize + 2)) + (x + 1)
+    val vertex: Short = (((y + 1) * (boardSize + 2)) + (x + 1)).toShort
     assert(vertex >= 0 && vertex < m_maxsq)
     vertex
   }
@@ -138,194 +140,207 @@ class FastBoard(boardSize: Int = MAX_BOARD_SIZE) {
     getVertex(newxy._1, newxy._2)
   }
 
-  /*
+  def resetBoard(size: Short): Unit = {
+    boardSize = size
+    m_maxsq = ((size + 2) * (size + 2)).toShort
 
-  void FastBoard::reset_board(int size) {
-    m_boardsize = size;
-    m_maxsq = (size + 2) * (size + 2);
-    m_tomove = BLACK;
-    m_prisoners[BLACK] = 0;
-    m_prisoners[WHITE] = 0;
-    m_totalstones[BLACK] = 0;
-    m_totalstones[WHITE] = 0;
-    m_empty_cnt = 0;
+    m_square = Array.ofDim[Byte](m_maxsq)    // Board contents          std::array<square_t, MAXSQ>
+    m_next = Array.ofDim[Short](m_maxsq + 1)  // next stone in string   std::array<unsigned short, MAXSQ+1>
+    m_parent = Array.ofDim[Short](m_maxsq + 1)  // parent node of string
+    m_libs = Array.ofDim[Short](m_maxsq + 1)  // liberties per string parent
+    m_stones = Array.ofDim[Short](m_maxsq + 1)  // stones per string parent
+    m_neighbors = Array.ofDim[Short](m_maxsq )  // counts of neighboring stones
+    m_dirs = Array.ofDim[Int](4)              // movement in 4 directions
+    m_extradirs = Array.ofDim[Int](8)         // movement in 8 directions
+    m_prisoners = Array.ofDim[Int](2)         // prisoners per color
+    m_totalstones = Array.ofDim[Int](2)       // total stones per color
+    m_critical = Seq()              // queue of critical points  (use dropRight to pop)
+    m_empty = Array.ofDim[Short](m_maxsq)     // empty squares
+    m_empty_idx = Array.ofDim[Short](m_maxsq)  // indices of empty squares
 
-    m_dirs[0] = -size-2;
-    m_dirs[1] = +1;
-    m_dirs[2] = +size+2;
-    m_dirs[3] = -1;
+    m_tomove = BLACK
+    m_prisoners(BLACK) = 0
+    m_prisoners(WHITE) = 0
+    m_totalstones(BLACK) = 0
+    m_totalstones(WHITE) = 0
+    var m_empty_cnt: Short = 0
 
-    m_extradirs[0] = -size-2-1;
-    m_extradirs[1] = -size-2;
-    m_extradirs[2] = -size-2+1;
-    m_extradirs[3] = -1;
-    m_extradirs[4] = +1;
-    m_extradirs[5] = +size+2-1;
-    m_extradirs[6] = +size+2;
-    m_extradirs[7] = +size+2+1;
+    m_dirs(0) = -size - 2
+    m_dirs(1) = +1
+    m_dirs(2) = +size + 2
+    m_dirs(3) = -1
 
-    for (int i = 0; i < m_maxsq; i++) {
-      m_square[i]     = INVAL;
-      m_neighbours[i] = 0;
-      m_parent[i]     = MAXSQ;
+    m_extradirs(0) = -size - 2 - 1
+    m_extradirs(1) = -size - 2
+    m_extradirs(2) = -size - 2 + 1
+    m_extradirs(3) = -1
+    m_extradirs(4) = +1
+    m_extradirs(5) = +size + 2 - 1
+    m_extradirs(6) = +size + 2
+    m_extradirs(7) = +size + 2 + 1
+
+    for (i <- 0 until m_maxsq) {
+      m_square(i) = INVALID
+      m_neighbors(i) = 0
+      m_parent(i) = MAXSQ
     }
 
-    for (int i = 0; i < size; i++) {
-      for (int j = 0; j < size; j++) {
-        int vertex = get_vertex(i, j);
+    for (i <- 0 until size) {
+      for (j <- 0 until size) {
+        val vertex: Short = getVertex(i, j)
 
-        m_square[vertex]          = EMPTY;
-        m_empty_idx[vertex]       = m_empty_cnt;
-        m_empty[m_empty_cnt++]    = vertex;
+        m_square(vertex) = EMPTY
+        m_empty_idx(vertex) = m_empty_cnt
+        m_empty(m_empty_cnt) = vertex
+        m_empty_cnt += 1
 
         if (i == 0 || i == size - 1) {
-          m_neighbours[vertex] += (1 << (NBR_SHIFT * BLACK))
-          | (1 << (NBR_SHIFT * WHITE));
-          m_neighbours[vertex] +=  1 << (NBR_SHIFT * EMPTY);
+          m_neighbors(vertex) += (1 << (NBR_SHIFT * BLACK)) | (1 << (NBR_SHIFT * WHITE))
+          m_neighbors(vertex) +=  1 << (NBR_SHIFT * EMPTY)
         } else {
-          m_neighbours[vertex] +=  2 << (NBR_SHIFT * EMPTY);
+          m_neighbors(vertex) +=  2 << (NBR_SHIFT * EMPTY)
         }
 
         if (j == 0 || j == size - 1) {
-          m_neighbours[vertex] += (1 << (NBR_SHIFT * BLACK))
-          | (1 << (NBR_SHIFT * WHITE));
-          m_neighbours[vertex] +=  1 << (NBR_SHIFT * EMPTY);
+          m_neighbors(vertex) += (1 << (NBR_SHIFT * BLACK))| (1 << (NBR_SHIFT * WHITE))
+          m_neighbors(vertex) +=  1 << (NBR_SHIFT * EMPTY)
         } else {
-          m_neighbours[vertex] +=  2 << (NBR_SHIFT * EMPTY);
+          m_neighbors(vertex) +=  2 << (NBR_SHIFT * EMPTY)
         }
       }
     }
 
-    m_parent[MAXSQ] = MAXSQ;
-    m_libs[MAXSQ]   = 16384;    /* we will subtract from this */
-    m_next[MAXSQ]   = MAXSQ;
+    m_parent(MAXSQ) = MAXSQ
+    m_libs(MAXSQ)   = 16384   /* subtract from this */
+    m_next(MAXSQ)   = MAXSQ
   }
 
-  bool FastBoard::is_suicide(int i, int color) {
-    if (count_pliberties(i)) {
-      return false;
+  def isSuicide(i: Int, color: Int): Boolean = {
+    if (countPliberties(i) > 0) {
+      return false
     }
 
-    bool connecting = false;
+    var connecting = false
 
-    for (int k = 0; k < 4; k++) {
-      int ai = i + m_dirs[k];
+    for (k <- 0 until 4) {
+      val ai = i + m_dirs(k)
 
-      int libs = m_libs[m_parent[ai]];
-      if (get_square(ai) == color) {
+      val libs = m_libs(m_parent(ai))
+      if (getSquare(ai) == color) {
         if (libs > 1) {
           // connecting to live group = never suicide
-          return false;
+          return false
         }
-        connecting = true;
+        connecting = true
       } else {
         if (libs <= 1) {
           // killing neighbor = never suicide
-          return false;
+          return false
         }
       }
     }
 
-    add_neighbour(i, color);
+    addNeighbor(i, color)
 
-    bool opps_live = true;
-    bool ours_die = true;
+    var opps_live = true
+    var ours_die = true
 
-    for (int k = 0; k < 4; k++) {
-      int ai = i + m_dirs[k];
+    for (k <- 0 until 4) {
+      val ai = i + m_dirs(k)
+      val libs = m_libs(m_parent(ai))
 
-      int libs = m_libs[m_parent[ai]];
-
-      if (libs == 0 && get_square(ai) != color) {
-        opps_live = false;
-      } else if (libs != 0 && get_square(ai) == color) {
-        ours_die = false;
+      if (libs == 0 && getSquare(ai) != color) {
+        opps_live = false
+      } else if (libs != 0 && getSquare(ai) == color) {
+        ours_die = false
       }
     }
 
-    remove_neighbour(i, color);
+    removeNeighbor(i, color)
 
-    if (!connecting) {
-      return opps_live;
-    } else {
-      return opps_live && ours_die;
+    if (!connecting) opps_live else opps_live && ours_die
+  }
+
+  def countPliberties(i: Int): Int = {
+    countNeighbors(EMPTY, i)
+  }
+
+  /**
+    * @return Count of neighbors of color c at vertex v the border of the board has fake neighours of both colors
+    */
+  def countNeighbors(c: Int, v: Int): Int = {
+    assert(c == WHITE || c == BLACK || c == EMPTY)
+    (m_neighbors(v) >> (NBR_SHIFT * c)) & 7
+  }
+
+  def addNeighbor(idx: Int, color: Int): Unit = {
+    assert(color == WHITE || color == BLACK || color == EMPTY)
+
+    val nbrPars = Array[Int](4)
+    var nbr_par_cnt: Int = 0
+
+    for (k <- 0 until 4) {
+      val ai = idx + m_dirs(k)
+      m_neighbors(ai) += (1 << (NBR_SHIFT * color)) - (1 << (NBR_SHIFT * EMPTY))
+
+      var found = false
+      var i = 0
+      while (i < nbr_par_cnt && !found) {
+        if (nbrPars(i) == m_parent(ai)) {
+          found = true
+        }
+        i += 1
+      }
+      if (!found) {
+        m_libs(m_parent(ai)) -= 1
+        nbrPars(nbr_par_cnt) = m_parent(ai)
+        nbr_par_cnt += 1
+      }
     }
   }
 
-  int FastBoard::count_pliberties(const int i) {
-    return count_neighbours(EMPTY, i);
-  }
+  def removeNeighbor(idx: Int, color: Int): Unit = {
+    assert(color == WHITE || color == BLACK || color == EMPTY)
 
-  // count neighbours of color c at vertex v
-  // the border of the board has fake neighours of both colors
-  int FastBoard::count_neighbours(const int c, const int v) {
-    assert(c == WHITE || c == BLACK || c == EMPTY);
-    return (m_neighbours[v] >> (NBR_SHIFT * c)) & 7;
-  }
+    val nbrPars = Array[Int](4)
+    var nbr_par_cnt: Int = 0
 
-  int FastBoard::fast_ss_suicide(const int color, const int i)  {
-    int eyeplay = (m_neighbours[i] & s_eyemask[!color]);
+    for (k <- 0 until 4) {
+      val ai = idx + m_dirs(k)
 
-    if (!eyeplay) return false;
+      m_neighbors(ai) += (1 << (NBR_SHIFT * EMPTY)) - (1 << (NBR_SHIFT * color))
 
-    if (m_libs[m_parent[i - 1              ]] <= 1) return false;
-    if (m_libs[m_parent[i + 1              ]] <= 1) return false;
-    if (m_libs[m_parent[i + m_boardsize + 2]] <= 1) return false;
-    if (m_libs[m_parent[i - m_boardsize - 2]] <= 1) return false;
-
-    return true;
-  }
-
-  void FastBoard::add_neighbour(const int i, const int color) {
-    assert(color == WHITE || color == BLACK || color == EMPTY);
-
-    std::array<int, 4> nbr_pars;
-    int nbr_par_cnt = 0;
-
-    for (int k = 0; k < 4; k++) {
-      int ai = i + m_dirs[k];
-
-      m_neighbours[ai] += (1 << (NBR_SHIFT * color)) - (1 << (NBR_SHIFT * EMPTY));
-
-      bool found = false;
-      for (int i = 0; i < nbr_par_cnt; i++) {
-        if (nbr_pars[i] == m_parent[ai]) {
-          found = true;
-          break;
+      var found = false
+      var i = 0
+      while (i < nbr_par_cnt && !found) {
+        if (nbrPars(i) == m_parent(ai)) {
+          found = true
         }
       }
       if (!found) {
-        m_libs[m_parent[ai]]--;
-        nbr_pars[nbr_par_cnt++] = m_parent[ai];
+        m_libs(m_parent(ai)) += 1
+        nbrPars(nbr_par_cnt) = m_parent(ai)
+        nbr_par_cnt += 1
       }
     }
   }
 
-  void FastBoard::remove_neighbour(const int i, const int color) {
-    assert(color == WHITE || color == BLACK || color == EMPTY);
+  def otherColor(color: Int): Int =
+    if (color == BLACK) WHITE
+    else if (color == WHITE) BLACK
+    else throw new IllegalStateException("Unexpected color: " + color)
 
-    std::array<int, 4> nbr_pars;
-    int nbr_par_cnt = 0;
+  def fastSsSuicide(color: Int, i: Int): Boolean = {
+    val eyeplay: Int = m_neighbors(i) & EYE_MASK(otherColor(color))
 
-    for (int k = 0; k < 4; k++) {
-      int ai = i + m_dirs[k];
+    if (eyeplay > 0) return false
 
-      m_neighbours[ai] += (1 << (NBR_SHIFT * EMPTY))
-      - (1 << (NBR_SHIFT * color));
-
-      bool found = false;
-      for (int i = 0; i < nbr_par_cnt; i++) {
-        if (nbr_pars[i] == m_parent[ai]) {
-          found = true;
-          break;
-        }
-      }
-      if (!found) {
-        m_libs[m_parent[ai]]++;
-        nbr_pars[nbr_par_cnt++] = m_parent[ai];
-      }
-    }
+    !((m_libs(m_parent(i - 1)) <= 1) ||
+      (m_libs(m_parent(i + 1)) <= 1) ||
+      (m_libs(m_parent(i + boardSize + 2)) <= 1) ||
+      (m_libs(m_parent(i - boardSize - 2)) <= 1))
   }
+  /*
 
   int FastBoard::remove_string_fast(int i) {
     int pos = i;
@@ -341,7 +356,7 @@ class FastBoard(boardSize: Int = MAX_BOARD_SIZE) {
       m_parent[pos]  = MAXSQ;
       m_totalstones[color]--;
 
-      remove_neighbour(pos, color);
+      remove_neighbor(pos, color);
 
       m_empty_idx[pos]     = m_empty_cnt;
       m_empty[m_empty_cnt] = pos;
@@ -436,8 +451,8 @@ class FastBoard(boardSize: Int = MAX_BOARD_SIZE) {
 
       assert(m_square[i] == EMPTY);
 
-      int allblack = ((m_neighbours[i] >> (NBR_SHIFT * BLACK)) & 7) == 4;
-      int allwhite = ((m_neighbours[i] >> (NBR_SHIFT * WHITE)) & 7) == 4;
+      int allblack = ((m_neighbors[i] >> (NBR_SHIFT * BLACK)) & 7) == 4;
+      int allwhite = ((m_neighbors[i] >> (NBR_SHIFT * WHITE)) & 7) == 4;
 
       if (allwhite) {
         wsc++;
@@ -613,7 +628,7 @@ class FastBoard(boardSize: Int = MAX_BOARD_SIZE) {
     m_stones[i]  = 1;
     m_totalstones[color]++;
 
-    add_neighbour(i, color);
+    add_neighbor(i, color);
 
     int captured_sq;
     int captured_stones = 0;
@@ -654,7 +669,7 @@ class FastBoard(boardSize: Int = MAX_BOARD_SIZE) {
     assert(color == WHITE || color == BLACK);
 
     /* did we play into an opponent eye? */
-    int eyeplay = (m_neighbours[i] & s_eyemask[!color]);
+    int eyeplay = (m_neighbors[i] & s_eyemask[!color]);
 
     // because we check for single stone suicide, we know
     // its a capture, and it might be a ko capture
@@ -670,7 +685,7 @@ class FastBoard(boardSize: Int = MAX_BOARD_SIZE) {
     m_stones[i]  = 1;
     m_totalstones[color]++;
 
-    add_neighbour(i, color);
+    add_neighbor(i, color);
 
     for (int k = 0; k < 4; k++) {
       int ai = i + m_dirs[k];
@@ -715,7 +730,7 @@ class FastBoard(boardSize: Int = MAX_BOARD_SIZE) {
 
   bool FastBoard::is_eye(const int color, const int i) {
     /* check for 4 neighbors of the same color */
-    int ownsurrounded = (m_neighbours[i] & s_eyemask[color]);
+    int ownsurrounded = (m_neighbors[i] & s_eyemask[color]);
 
     // if not, it can't be an eye
     // this takes advantage of borders being colored
