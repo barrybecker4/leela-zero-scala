@@ -41,6 +41,9 @@ object FastBoard {
   val CINVERT = Array(WHITE, BLACK, EMPTY, INVALID) // s_cinvert
 }
 
+/**
+  * Manages moves on the go board.
+  */
 class FastBoard() {
 
   // int FastBoard::get_boardsize() return m_boardsize;
@@ -67,7 +70,7 @@ class FastBoard() {
 
   private var boardSize: Int = MAX_BOARD_SIZE
   private var scoremoves_t: Seq[MoveScore] = _
-  private var m_maxsq: Short = _
+
   private var m_square: Array[Byte] = _    // Board contents          std::array<square_t, MAXSQ>
   private var m_next: Array[Short] = _     // next stone in string   std::array<unsigned short, MAXSQ+1>
   private var m_parent: Array[Short] = _   // parent node of string
@@ -79,10 +82,11 @@ class FastBoard() {
   private var m_prisoners: Array[Int] = _     // prisoners per color
   private var m_totalstones: Array[Int] = _       // total stones per color
   private var m_critical: Seq[Int] = Seq()              // queue of critical points  (use dropRight to pop)
-  private var m_empty = Array.ofDim[Short](m_maxsq)     // empty squares
-  private var m_empty_idx = Array.ofDim[Short](m_maxsq)  // indices of empty squares
-  private var m_empty_cnt: Int = 0
+  private var m_empty: Array[Short] = _      // empty squares
+  private var m_empty_idx: Array[Short] = _  // indices of empty squares
+  private var m_empty_cnt: Short = 0
   private var m_tomove: Byte = 0
+  private var m_maxsq: Short = _
 
   def getVertex(x: Int, y: Int): Short = {
     assert(x >= 0 && x < MAX_BOARD_SIZE)
@@ -261,19 +265,19 @@ class FastBoard() {
     if (!connecting) opps_live else opps_live && ours_die
   }
 
-  def countPliberties(i: Int): Int = {
+  private def countPliberties(i: Int): Int = {
     countNeighbors(EMPTY, i)
   }
 
   /**
     * @return Count of neighbors of color c at vertex v the border of the board has fake neighours of both colors
     */
-  def countNeighbors(c: Int, v: Int): Int = {
+  private def countNeighbors(c: Int, v: Int): Int = {
     assert(c == WHITE || c == BLACK || c == EMPTY)
     (m_neighbors(v) >> (NBR_SHIFT * c)) & 7
   }
 
-  def addNeighbor(idx: Int, color: Int): Unit = {
+  private def addNeighbor(idx: Int, color: Int): Unit = {
     assert(color == WHITE || color == BLACK || color == EMPTY)
 
     val nbrPars = Array[Int](4)
@@ -299,7 +303,7 @@ class FastBoard() {
     }
   }
 
-  def removeNeighbor(idx: Int, color: Int): Unit = {
+  private def removeNeighbor(idx: Int, color: Int): Unit = {
     assert(color == WHITE || color == BLACK || color == EMPTY)
 
     val nbrPars = Array[Int](4)
@@ -325,84 +329,80 @@ class FastBoard() {
     }
   }
 
-  def otherColor(color: Int): Int =
+  private def otherColor(color: Int): Int =
     if (color == BLACK) WHITE
     else if (color == WHITE) BLACK
     else throw new IllegalStateException("Unexpected color: " + color)
 
-  def fastSsSuicide(color: Int, i: Int): Boolean = {
-    val eyeplay: Int = m_neighbors(i) & EYE_MASK(otherColor(color))
+  private def fastSsSuicide(color: Int, i: Int): Boolean = {
+    val eyePlay: Int = m_neighbors(i) & EYE_MASK(otherColor(color))
 
-    if (eyeplay > 0) return false
+    if (eyePlay > 0) return false
 
     !((m_libs(m_parent(i - 1)) <= 1) ||
       (m_libs(m_parent(i + 1)) <= 1) ||
       (m_libs(m_parent(i + boardSize + 2)) <= 1) ||
       (m_libs(m_parent(i - boardSize - 2)) <= 1))
   }
-  /*
 
-  int FastBoard::remove_string_fast(int i) {
-    int pos = i;
-    int removed = 0;
-    int color = m_square[i];
-
-    assert(color == WHITE || color == BLACK || color == EMPTY);
+  /** @return the number of stones in the string that was removed */
+  private def removeStringFast(i: Short): Short = {
+    var pos: Short = i
+    var removed: Short = 0
+    val color = m_square(i)
+    assert(color == WHITE || color == BLACK || color == EMPTY)
 
     do {
-      assert(m_square[pos] == color);
+      assert(m_square(pos) == color)
+      m_square(pos) = EMPTY
+      m_parent(pos) = MAXSQ
+      m_totalstones(color) -= 1
 
-      m_square[pos]  = EMPTY;
-      m_parent[pos]  = MAXSQ;
-      m_totalstones[color]--;
+      removeNeighbor(pos, color)
 
-      remove_neighbor(pos, color);
+      m_empty_idx(pos) = m_empty_cnt
+      m_empty(m_empty_cnt) = pos
+      m_empty_cnt += 1
 
-      m_empty_idx[pos]     = m_empty_cnt;
-      m_empty[m_empty_cnt] = pos;
-      m_empty_cnt++;
+      removed += 1
+      pos = m_next(pos)
+    } while (pos != i)
 
-      removed++;
-      pos = m_next[pos];
-    } while (pos != i);
-
-    return removed;
+    removed
   }
 
-  std::vector<bool> FastBoard::calc_reach_color(int col) {
-    auto bd = std::vector<bool>(m_maxsq);
-    auto last = std::vector<bool>(m_maxsq);
+  private def calcReachColor(col: Short): Unit = {
+    val bd = Array.fill[Boolean](m_maxsq)(false)
+    var last = Array.fill[Boolean](m_maxsq)(false)
 
-    std::fill(begin(bd), end(bd), false);
-    std::fill(begin(last), end(last), false);
-
-    /* needs multi pass propagation, slow */
+    /* needs multi-pass propagation, slow */
     do {
-      last = bd;
-      for (int i = 0; i < m_boardsize; i++) {
-        for (int j = 0; j < m_boardsize; j++) {
-          int vertex = get_vertex(i, j);
-          /* colored field, spread */
-          if (m_square[vertex] == col) {
-            bd[vertex] = true;
-            for (int k = 0; k < 4; k++) {
-              if (m_square[vertex + m_dirs[k]] == EMPTY) {
-                bd[vertex + m_dirs[k]] = true;
+      last = bd
+      for (i <- 0 until boardSize) {
+        for (j <- 0 until boardSize) {
+          val vertex = getVertex(i, j)
+          // colored field, spread
+          if (m_square(vertex) == col) {
+            bd(vertex) = true
+            for (k <- 0 until 4) {
+              if (m_square(vertex + m_dirs(k)) == EMPTY) {
+                bd(vertex + m_dirs(k)) = true
               }
             }
-          } else if (m_square[vertex] == EMPTY && bd[vertex]) {
-            for (int k = 0; k < 4; k++) {
-              if (m_square[vertex + m_dirs[k]] == EMPTY) {
-                bd[vertex + m_dirs[k]] = true;
+          } else if (m_square(vertex) == EMPTY && bd(vertex)) {
+            for (k <- 0 until 4) {
+              if (m_square(vertex + m_dirs(k)) == EMPTY) {
+                bd(vertex + m_dirs(k)) = true
               }
             }
           }
         }
       }
-    } while (last != bd);
-
-    return bd;
+    } while (last != bd)
+    bd
   }
+
+  /*
 
   // Needed for scoring passed out games not in MC playouts
   float FastBoard::area_score(float komi) {
