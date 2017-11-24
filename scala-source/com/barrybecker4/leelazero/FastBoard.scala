@@ -46,32 +46,10 @@ object FastBoard {
   */
 class FastBoard() {
 
-  // int FastBoard::get_boardsize() return m_boardsize;
-
-  /*
-  std::array<square_t, MAXSQ>            m_square;      /* board contents */
-  std::array<unsigned short, MAXSQ+1>    m_next;        /* next stone in string */
-
-  std::array<unsigned short, MAXSQ+1>    m_parent;      /* parent node of string */
-  std::array<unsigned short, MAXSQ+1>    m_libs;        /* liberties per string parent */
-  std::array<unsigned short, MAXSQ+1>    m_stones;      /* stones per string parent */
-  std::array<unsigned short, MAXSQ>      m_neighbors;  /* counts of neighboring stones */
-  std::array<int, 4>                     m_dirs;        /* movement directions 4 way */
-  std::array<int, 8>                     m_extradirs;   /* movement directions 8 way */
-  std::array<int, 2>                     m_prisoners;   /* prisoners per color */
-  std::array<int, 2>                     m_totalstones; /* stones per color */
-  std::vector<int>                       m_critical;    /* queue of critical points */
-  std::array<unsigned short, MAXSQ>      m_empty;       /* empty squares */
-  std::array<unsigned short, MAXSQ>      m_empty_idx;   /* indexes of square */
-  int m_empty_cnt;                                      /* count of empties */
-
-  int m_tomove;
-  int m_maxsq;*/
-
   private var boardSize: Short = MAX_BOARD_SIZE
   private var scoremoves_t: Seq[MoveScore] = _
 
-  private var m_square: Array[Byte] = _    // Board contents          std::array<square_t, MAXSQ>
+  private var m_square: Array[Byte] = _    // Board contents         std::array<square_t, MAXSQ>
   private var m_next: Array[Short] = _     // next stone in string   std::array<unsigned short, MAXSQ+1>
   private var m_parent: Array[Short] = _   // parent node of string
   private var m_libs: Array[Short] = _     // liberties per string parent
@@ -80,13 +58,15 @@ class FastBoard() {
   private var m_dirs: Array[Int] = _          // movement in 4 directions
   private var m_extradirs: Array[Int] = _     // movement in 8 directions
   private var m_prisoners: Array[Int] = _     // prisoners per color
-  private var m_totalstones: Array[Int] = _       // total stones per color
-  private var m_critical: Seq[Short] = Seq()              // queue of critical points  (use dropRight to pop)
+  private var m_totalstones: Array[Int] = _   // total stones per color
+  private var m_critical: Seq[Short] = Seq()  // queue of critical points  (use dropRight to pop)
   private var m_empty: Array[Short] = _      // empty squares
   private var m_empty_idx: Array[Short] = _  // indices of empty squares
   private var m_empty_cnt: Short = 0
   private var m_tomove: Byte = 0
   private var m_maxsq: Short = _
+
+  def getBoardSize = boardSize
 
   def getVertex(x: Short, y: Short): Short = {
     assert(x >= 0 && x < MAX_BOARD_SIZE)
@@ -151,19 +131,19 @@ class FastBoard() {
     boardSize = size
     m_maxsq = ((size + 2) * (size + 2)).toShort
 
-    m_square = Array.ofDim[Byte](m_maxsq)    // Board contents          std::array<square_t, MAXSQ>
-    m_next = Array.ofDim[Short](m_maxsq + 1)  // next stone in string   std::array<unsigned short, MAXSQ+1>
-    m_parent = Array.ofDim[Short](m_maxsq + 1)  // parent node of string
-    m_libs = Array.ofDim[Short](m_maxsq + 1)  // liberties per string parent
-    m_stones = Array.ofDim[Short](m_maxsq + 1)  // stones per string parent
-    m_neighbors = Array.ofDim[Short](m_maxsq )  // counts of neighboring stones
-    m_dirs = Array.ofDim[Int](4)              // movement in 4 directions
-    m_extradirs = Array.ofDim[Int](8)         // movement in 8 directions
-    m_prisoners = Array.ofDim[Int](2)         // prisoners per color
-    m_totalstones = Array.ofDim[Int](2)       // total stones per color
-    m_critical = Seq()              // queue of critical points  (use dropRight to pop)
-    m_empty = Array.ofDim[Short](m_maxsq)     // empty squares
-    m_empty_idx = Array.ofDim[Short](m_maxsq)  // indices of empty squares
+    m_square = Array.ofDim[Byte](m_maxsq)
+    m_next = Array.ofDim[Short](m_maxsq + 1)
+    m_parent = Array.ofDim[Short](m_maxsq + 1)
+    m_libs = Array.ofDim[Short](m_maxsq + 1)
+    m_stones = Array.ofDim[Short](m_maxsq + 1)
+    m_neighbors = Array.ofDim[Short](m_maxsq )
+    m_dirs = Array.ofDim[Int](4)
+    m_extradirs = Array.ofDim[Int](8)
+    m_prisoners = Array.ofDim[Int](2)
+    m_totalstones = Array.ofDim[Int](2)
+    m_critical = Seq()
+    m_empty = Array.ofDim[Short](m_maxsq)
+    m_empty_idx = Array.ofDim[Short](m_maxsq)
 
     m_tomove = BLACK
     m_prisoners(BLACK) = 0
@@ -806,70 +786,54 @@ class FastBoard() {
     (row , column)
   }
 
-  /*
-  int FastBoard::text_to_move(std::string move) {
-    if (move.size() == 0 || move == "pass") {
-      return FastBoard::PASS;
+  def testToMove(move: String): Int = {
+    if (move.length == 0 || move == "pass") {
+      return PASS
     }
     if (move == "resign") {
-      return FastBoard::RESIGN;
+      return RESIGN
     }
 
-    char c1 = tolower(move[0]);
-    int x = c1 - 'a';
+    val c1 = move(0).toLower
+    var x: Int = c1 - 'a'
     // There is no i in ...
-    assert(x != 8);
-    if (x > 8) x--;
-    std::string remainder = move.substr(1);
-    int y = std::stoi(remainder) - 1;
-
-    int vtx = get_vertex(x, y);
-
-    return vtx;
+    assert(x != 8)
+    if (x > 8) x -= 1
+    val remainder = move.substring(1)
+    val y: Int = remainder.toInt - 1
+    getVertex(x, y)
   }
 
-  int FastBoard::get_prisoners(int side) {
-    assert(side == WHITE || side == BLACK);
-
-    return m_prisoners[side];
+  def getPrisoners(side: Short): Int = {
+    assert(side == WHITE || side == BLACK)
+    m_prisoners(side)
   }
 
-  bool FastBoard::black_to_move() {
-    return m_tomove == BLACK;
+  def blackToMove(): Boolean = m_tomove == BLACK
+  def getToMove: Byte = m_tomove
+  def setToMove(tomove: Byte): Unit = { m_tomove = tomove }
+
+  def getGroupId(vertex: Int): Int = {
+    assert(m_square(vertex) == WHITE || m_square(vertex) == BLACK)
+    assert(m_parent(vertex) == m_parent(m_parent(vertex)))
+    m_parent(vertex)
   }
 
-  int FastBoard::get_to_move() {
-    return m_tomove;
-  }
+  def getStringStonnes(vertex: Int): Seq[Int] = {
+    val start = m_parent(vertex)
 
-  void FastBoard::set_to_move(int tomove) {
-    m_tomove = tomove;
-  }
-
-  int FastBoard::get_groupid(int vertex) {
-    assert(m_square[vertex] == WHITE || m_square[vertex] == BLACK);
-    assert(m_parent[vertex] == m_parent[m_parent[vertex]]);
-
-    return m_parent[vertex];
-  }
-
-  std::vector<int> FastBoard::get_string_stones(int vertex) {
-    int start = m_parent[vertex];
-
-    std::vector<int> res;
-    res.reserve(m_stones[start]);
-
-    int newpos = start;
+    var res: Seq[Int] = Seq() //Array.ofDim(m_stones(start))
+    var newpos = start
 
     do {
-      assert(m_square[newpos] == m_square[vertex]);
-      res.push_back(newpos);
-      newpos = m_next[newpos];
-    } while (newpos != start);
+      assert(m_square(newpos) == m_square(vertex))
+      res :+= newpos
+      newpos = m_next(newpos)
+    } while (newpos != start)
 
-    return res;
+    res
   }
-
+  /*
   std::string FastBoard::get_string(int vertex) {
     std::string result;
 
