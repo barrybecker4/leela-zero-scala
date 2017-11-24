@@ -12,7 +12,6 @@ object FastBoard {
   val MAX_BOARD_SIZE: Short = 19
 
   /** highest existing square */
-  //val MAXSQ : Short = ((MAX_BOARD_SIZE + 2) * (MAX_BOARD_SIZE + 2)).toShort
   val MAX_LIBS: Short =  16384  // 2^14
 
   /** infinite score */
@@ -34,7 +33,7 @@ object FastBoard {
   type MoveScore = Tuple2[Short, Float]    // movescore_t
 
   /**  bit masks to detect eyes on neighbors */
-  val EYE_MASK: Array[Short] = Array(               // s_eyemask
+  val EYE_MASK: Array[Short] = Array(        // s_eyemask
     (4 * (1 << (NBR_SHIFT * BLACK))).toShort,
     (4 * (1 << (NBR_SHIFT * WHITE))).toShort
   )
@@ -48,24 +47,24 @@ object FastBoard {
 class FastBoard() {
 
   private var boardSize: Short = MAX_BOARD_SIZE
-  private var scoremoves_t: Seq[MoveScore] = _
+  private var scoreMoves: Seq[MoveScore] = _
 
-  private var m_square: Array[Byte] = _    // Board contents         std::array<square_t, MAXSQ>
-  private var m_next: Array[Short] = _     // next stone in string   std::array<unsigned short, MAXSQ+1>
-  private var m_parent: Array[Short] = _   // parent node of string
-  private var m_libs: Array[Int] = _     // liberties per string parent
-  private var m_stones: Array[Int] = _   // stones per string parent
-  private var m_neighbors: Array[Int] = _  // counts of neighboring stones
-  private var m_dirs: Array[Int] = _          // movement in 4 directions
-  private var m_extradirs: Array[Int] = _     // movement in 8 directions
-  private var m_prisoners: Array[Int] = _     // prisoners per color
-  private var m_totalstones: Array[Int] = _   // total stones per color
-  private var m_critical: Seq[Short] = Seq()  // queue of critical points  (use dropRight to pop)
-  private var m_empty: Array[Short] = _      // empty squares
-  private var m_empty_idx: Array[Int] = _  // indices of empty squares
-  private var m_empty_cnt: Int = _
-  private var m_tomove: Byte = _
-  private var m_maxsq: Short = _
+  private var square: Array[Byte] = _    // Board contents         std::array<square_t, MAXSQ>
+  private var next: Array[Short] = _     // next stone in string   std::array<unsigned short, MAXSQ+1>
+  private var parent: Array[Short] = _   // parent node of string
+  private var liberties: Array[Int] = _     // liberties per string parent
+  private var stones: Array[Int] = _   // stones per string parent
+  private var neighbors: Array[Int] = _  // counts of neighboring stones
+  private var directions: Array[Int] = _          // movement in 4 directions
+  private var extraDirections: Array[Int] = _     // movement in 8 directions
+  private var prisoners: Array[Int] = _     // prisoners per color
+  private var totalStones: Array[Int] = _   // total stones per color
+  private var critical: Seq[Short] = Seq()  // queue of critical points  (use dropRight to pop)
+  private var emptySquare: Array[Short] = _      // empty squares
+  private var emptyIdx: Array[Int] = _  // indices of empty squares
+  private var emptyCnt: Int = _
+  private var toMove: Byte = _
+  private var maxSq: Short = _
 
   def getBoardSize: Short = boardSize
 
@@ -73,7 +72,7 @@ class FastBoard() {
     assert(x >= 0 && x < boardSize)
     assert(y >= 0 && y < boardSize)
     val vertex: Short = (((y + 1) * (boardSize + 2)) + (x + 1)).toShort
-    assert(vertex >= 0 && vertex < m_maxsq)
+    assert(vertex >= 0 && vertex < maxSq)
     vertex
   }
 
@@ -90,14 +89,14 @@ class FastBoard() {
   }
 
   def getSquare(vertex: Int): Byte = {
-    assert(vertex >= 0 && vertex < m_maxsq)
-    m_square(vertex)
+    assert(vertex >= 0 && vertex < maxSq)
+    square(vertex)
   }
 
   def setSquare(vertex: Int, content: Byte): Unit = {
-    assert(vertex >= 0 && vertex < m_maxsq)
+    assert(vertex >= 0 && vertex < maxSq)
     assert(content >= BLACK && content <= INVALID)
-    m_square(vertex) = content
+    square(vertex) = content
   }
 
   def getSquare(x: Int, y: Int): Byte = getSquare(getVertex(x, y))
@@ -128,79 +127,79 @@ class FastBoard() {
   }
 
   def resetBoard(size: Short): Unit = {
-    assert(size < MAX_BOARD_SIZE)
+    assert(size <= MAX_BOARD_SIZE)
     boardSize = size
-    m_maxsq = ((size + 2) * (size + 2)).toShort
+    maxSq = ((size + 2) * (size + 2)).toShort
 
-    m_square = Array.ofDim[Byte](m_maxsq)
-    m_next = Array.ofDim[Short](m_maxsq + 1)
-    m_parent = Array.ofDim[Short](m_maxsq + 1)
-    m_libs = Array.ofDim[Int](m_maxsq + 1)
-    m_stones = Array.ofDim[Int](m_maxsq + 1)
-    m_neighbors = Array.ofDim[Int](m_maxsq )
-    m_dirs = Array.ofDim[Int](4)
-    m_extradirs = Array.ofDim[Int](8)
-    m_prisoners = Array.ofDim[Int](2)
-    m_totalstones = Array.ofDim[Int](2)
-    m_critical = Seq()
-    m_empty = Array.ofDim[Short](m_maxsq)
-    m_empty_idx = Array.ofDim[Int](m_maxsq)
+    square = Array.ofDim[Byte](maxSq)
+    next = Array.ofDim[Short](maxSq + 1)
+    parent = Array.ofDim[Short](maxSq + 1)
+    liberties = Array.ofDim[Int](maxSq + 1)
+    stones = Array.ofDim[Int](maxSq + 1)
+    neighbors = Array.ofDim[Int](maxSq )
+    directions = Array.ofDim[Int](4)
+    extraDirections = Array.ofDim[Int](8)
+    prisoners = Array.ofDim[Int](2)
+    totalStones = Array.ofDim[Int](2)
+    critical = Seq()
+    emptySquare = Array.ofDim[Short](maxSq)
+    emptyIdx = Array.ofDim[Int](maxSq)
 
-    m_tomove = BLACK
-    m_prisoners(BLACK) = 0
-    m_prisoners(WHITE) = 0
-    m_totalstones(BLACK) = 0
-    m_totalstones(WHITE) = 0
-    m_empty_cnt = 0
+    toMove = BLACK
+    prisoners(BLACK) = 0
+    prisoners(WHITE) = 0
+    totalStones(BLACK) = 0
+    totalStones(WHITE) = 0
+    emptyCnt = 0
 
-    m_dirs(0) = -size - 2
-    m_dirs(1) = +1
-    m_dirs(2) = +size + 2
-    m_dirs(3) = -1
+    directions(0) = -size - 2
+    directions(1) = +1
+    directions(2) = +size + 2
+    directions(3) = -1
 
-    m_extradirs(0) = -size - 2 - 1
-    m_extradirs(1) = -size - 2
-    m_extradirs(2) = -size - 2 + 1
-    m_extradirs(3) = -1
-    m_extradirs(4) = +1
-    m_extradirs(5) = +size + 2 - 1
-    m_extradirs(6) = +size + 2
-    m_extradirs(7) = +size + 2 + 1
+    extraDirections(0) = -size - 2 - 1
+    extraDirections(1) = -size - 2
+    extraDirections(2) = -size - 2 + 1
+    extraDirections(3) = -1
+    extraDirections(4) = +1
+    extraDirections(5) = +size + 2 - 1
+    extraDirections(6) = +size + 2
+    extraDirections(7) = +size + 2 + 1
 
-    for (i <- 0 until m_maxsq) {
-      m_square(i) = INVALID
-      m_neighbors(i) = 0
-      m_parent(i) = m_maxsq
+    for (i <- 0 until maxSq) {
+      square(i) = INVALID
+      neighbors(i) = 0
+      parent(i) = maxSq
     }
 
     for (i <- 0 until size) {
       for (j <- 0 until size) {
         val vertex: Short = getVertex(i, j)
 
-        m_square(vertex) = EMPTY
-        m_empty_idx(vertex) = m_empty_cnt
-        m_empty(m_empty_cnt) = vertex
-        m_empty_cnt = (m_empty_cnt + 1).toShort
+        square(vertex) = EMPTY
+        emptyIdx(vertex) = emptyCnt
+        emptySquare(emptyCnt) = vertex
+        emptyCnt = (emptyCnt + 1).toShort
 
         if (i == 0 || i == size - 1) {
-          m_neighbors(vertex) += (1 << (NBR_SHIFT * BLACK)) | (1 << (NBR_SHIFT * WHITE))
-          m_neighbors(vertex) += 1 << (NBR_SHIFT * EMPTY)
+          neighbors(vertex) += (1 << (NBR_SHIFT * BLACK)) | (1 << (NBR_SHIFT * WHITE))
+          neighbors(vertex) += 1 << (NBR_SHIFT * EMPTY)
         } else {
-          m_neighbors(vertex) += 2 << (NBR_SHIFT * EMPTY)
+          neighbors(vertex) += 2 << (NBR_SHIFT * EMPTY)
         }
 
         if (j == 0 || j == size - 1) {
-          m_neighbors(vertex) += (1 << (NBR_SHIFT * BLACK))| (1 << (NBR_SHIFT * WHITE))
-          m_neighbors(vertex) += 1 << (NBR_SHIFT * EMPTY)
+          neighbors(vertex) += (1 << (NBR_SHIFT * BLACK))| (1 << (NBR_SHIFT * WHITE))
+          neighbors(vertex) += 1 << (NBR_SHIFT * EMPTY)
         } else {
-          m_neighbors(vertex) += 2 << (NBR_SHIFT * EMPTY)
+          neighbors(vertex) += 2 << (NBR_SHIFT * EMPTY)
         }
       }
     }
 
-    m_parent(m_maxsq ) = m_maxsq
-    m_libs(m_maxsq) = MAX_LIBS   /* subtract from this */
-    m_next(m_maxsq) = m_maxsq
+    parent(maxSq ) = maxSq
+    liberties(maxSq) = MAX_LIBS   /* subtract from this */
+    next(maxSq) = maxSq
   }
 
   def isSuicide(i: Short, color: Short): Boolean = {
@@ -211,9 +210,9 @@ class FastBoard() {
     var connecting = false
 
     for (k <- 0 until 4) {
-      val ai = i + m_dirs(k)
+      val ai = i + directions(k)
 
-      val libs = m_libs(m_parent(ai))
+      val libs = liberties(parent(ai))
       if (getSquare(ai) == color) {
         if (libs > 1) {
           // connecting to live group = never suicide
@@ -234,8 +233,8 @@ class FastBoard() {
     var ours_die = true
 
     for (k <- 0 until 4) {
-      val ai = i + m_dirs(k)
-      val libs = m_libs(m_parent(ai))
+      val ai = i + directions(k)
+      val libs = liberties(parent(ai))
 
       if (libs == 0 && getSquare(ai) != color) {
         opps_live = false
@@ -258,7 +257,7 @@ class FastBoard() {
     */
   private def countNeighbors(c: Short, v: Short): Short = {
     assert(c == WHITE || c == BLACK || c == EMPTY)
-    ((m_neighbors(v) >> (NBR_SHIFT * c)) & 7).toShort
+    ((neighbors(v) >> (NBR_SHIFT * c)) & 7).toShort
   }
 
   private def addNeighbor(idx: Short, color: Short): Unit = {
@@ -268,20 +267,20 @@ class FastBoard() {
     var nbr_parent_cnt = 0
 
     for (k <- 0 until 4) {
-      val ai = idx + m_dirs(k)
-      m_neighbors(ai) += (1 << (NBR_SHIFT * color)) - (1 << (NBR_SHIFT * EMPTY))
+      val ai = idx + directions(k)
+      neighbors(ai) += (1 << (NBR_SHIFT * color)) - (1 << (NBR_SHIFT * EMPTY))
 
       var found = false
       var i = 0
       while (i < nbr_parent_cnt && !found) {
-        if (nbrPars(i) == m_parent(ai)) {
+        if (nbrPars(i) == parent(ai)) {
           found = true
         }
         i += 1
       }
       if (!found) {
-        m_libs(m_parent(ai)) -= 1
-        nbrPars(nbr_parent_cnt) = m_parent(ai)
+        liberties(parent(ai)) -= 1
+        nbrPars(nbr_parent_cnt) = parent(ai)
         nbr_parent_cnt += 1
       }
     }
@@ -293,20 +292,20 @@ class FastBoard() {
     var nbr_parent_cnt = 0
 
     for (k <- 0 until 4) {
-      val ai = idx + m_dirs(k)
+      val ai = idx + directions(k)
 
-      m_neighbors(ai) += (1 << (NBR_SHIFT * EMPTY)) - (1 << (NBR_SHIFT * color))
+      neighbors(ai) += (1 << (NBR_SHIFT * EMPTY)) - (1 << (NBR_SHIFT * color))
 
       var found = false
       var i = 0
       while (i < nbr_parent_cnt && !found) {
-        if (nbrPars(i) == m_parent(ai)) {
+        if (nbrPars(i) == parent(ai)) {
           found = true
         }
       }
       if (!found) {
-        m_libs(m_parent(ai)) += 1
-        nbrPars(nbr_parent_cnt) = m_parent(ai)
+        liberties(parent(ai)) += 1
+        nbrPars(nbr_parent_cnt) = parent(ai)
         nbr_parent_cnt += 1
       }
     }
@@ -318,45 +317,45 @@ class FastBoard() {
     else throw new IllegalStateException("Unexpected color: " + color)
 
   private def fastSsSuicide(color: Short, i: Short): Boolean = {
-    val eyePlay = m_neighbors(i) & EYE_MASK(otherColor(color))
+    val eyePlay = neighbors(i) & EYE_MASK(otherColor(color))
 
     if (eyePlay > 0) return false
 
-    !((m_libs(m_parent(i - 1)) <= 1) ||
-      (m_libs(m_parent(i + 1)) <= 1) ||
-      (m_libs(m_parent(i + boardSize + 2)) <= 1) ||
-      (m_libs(m_parent(i - boardSize - 2)) <= 1))
+    !((liberties(parent(i - 1)) <= 1) ||
+      (liberties(parent(i + 1)) <= 1) ||
+      (liberties(parent(i + boardSize + 2)) <= 1) ||
+      (liberties(parent(i - boardSize - 2)) <= 1))
   }
 
   /** @return the number of stones in the string that was removed */
   private def removeStringFast(i: Short): Int = {
     var pos: Short = i
     var removed = 0
-    val color = m_square(i)
+    val color = square(i)
     assert(color == WHITE || color == BLACK || color == EMPTY)
 
     do {
-      assert(m_square(pos) == color)
-      m_square(pos) = EMPTY
-      m_parent(pos) = m_maxsq
-      m_totalstones(color) -= 1
+      assert(square(pos) == color)
+      square(pos) = EMPTY
+      parent(pos) = maxSq
+      totalStones(color) -= 1
 
       removeNeighbor(pos, color)
 
-      m_empty_idx(pos) = m_empty_cnt
-      m_empty(m_empty_cnt) = pos
-      m_empty_cnt += 1
+      emptyIdx(pos) = emptyCnt
+      emptySquare(emptyCnt) = pos
+      emptyCnt += 1
 
       removed += 1
-      pos = m_next(pos)
+      pos = next(pos)
     } while (pos != i)
 
     removed
   }
 
   private def calcReachColor(col: Short): Array[Boolean] = {
-    val bd = Array.fill[Boolean](m_maxsq)(false)
-    var last = Array.fill[Boolean](m_maxsq)(false)
+    val bd = Array.fill[Boolean](maxSq)(false)
+    var last = Array.fill[Boolean](maxSq)(false)
 
     /* needs multi-pass propagation, slow */
     do {
@@ -365,17 +364,17 @@ class FastBoard() {
         for (j <- 0 until boardSize) {
           val vertex = getVertex(i, j)
           // colored field, spread
-          if (m_square(vertex) == col) {
+          if (square(vertex) == col) {
             bd(vertex) = true
             for (k <- 0 until 4) {
-              if (m_square(vertex + m_dirs(k)) == EMPTY) {
-                bd(vertex + m_dirs(k)) = true
+              if (square(vertex + directions(k)) == EMPTY) {
+                bd(vertex + directions(k)) = true
               }
             }
-          } else if (m_square(vertex) == EMPTY && bd(vertex)) {
+          } else if (square(vertex) == EMPTY && bd(vertex)) {
             for (k <- 0 until 4) {
-              if (m_square(vertex + m_dirs(k)) == EMPTY) {
-                bd(vertex + m_dirs(k)) = true
+              if (square(vertex + directions(k)) == EMPTY) {
+                bd(vertex + directions(k)) = true
               }
             }
           }
@@ -404,25 +403,25 @@ class FastBoard() {
     score
   }
 
-  def getStoneCount: Int = m_totalstones.sum    // m_totalstones(BLACK) + m_totalstones(WHITE)
+  def getStoneCount: Int = totalStones.sum    // totalStones(BLACK) + totalStones(WHITE)
 
   def estimateMcScore(komi: Float): Int = {
-    val wsc = m_totalstones(BLACK)
-    val bsc = m_totalstones(WHITE)
+    val wsc = totalStones(BLACK)
+    val bsc = totalStones(WHITE)
     bsc - wsc - komi.toShort + 1
   }
 
   def finalMcScore(komi: Float): Float = {
-    val maxempty = m_empty_cnt
-    var bsc = m_totalstones(BLACK)
-    var wsc = m_totalstones(WHITE)
+    val maxempty = emptyCnt
+    var bsc = totalStones(BLACK)
+    var wsc = totalStones(WHITE)
 
     for (v <- 0 until maxempty) {
-      val i = m_empty(v)
-      assert(m_square(i) == EMPTY)
+      val i = emptySquare(v)
+      assert(square(i) == EMPTY)
 
-      val allblack = ((m_neighbors(i) >> (NBR_SHIFT * BLACK)) & 7) == 4
-      val allwhite = ((m_neighbors(i) >> (NBR_SHIFT * WHITE)) & 7) == 4
+      val allblack = ((neighbors(i) >> (NBR_SHIFT * BLACK)) & 7) == 4
+      val allwhite = ((neighbors(i) >> (NBR_SHIFT * WHITE)) & 7) == 4
 
       if (allwhite) { wsc += 1 }
       else if (allblack) { bsc += 1 }
@@ -488,11 +487,11 @@ class FastBoard() {
         printf(" ")
       for (i <- 0 until boardSize) {
         if (getSquare(i,j) == WHITE) {
-          var libs = m_libs(m_parent(getVertex(i, j)))
+          var libs = liberties(parent(getVertex(i, j)))
           if (libs > 9) { libs = 9 }
           printf("%1d", libs)
         } else if (getSquare(i, j) == BLACK) {
-          var libs = m_libs(m_parent(getVertex(i, j)))
+          var libs = liberties(parent(getVertex(i, j)))
           if (libs > 9) { libs = 9; }
           printf("%1d", libs)
         } else if (starpoint(boardSize, i, j)) {
@@ -521,10 +520,10 @@ class FastBoard() {
         printf(" ")
       for (i <- 0 until boardSize) {
         if (getSquare(i, j) == WHITE) {
-          val id = m_parent(getVertex(i, j))
+          val id = parent(getVertex(i, j))
           printf("%2d", id)
         } else if (getSquare(i,j) == BLACK)  {
-          val id = m_parent(getVertex(i,j))
+          val id = parent(getVertex(i,j))
           printf("%2d", id)
         } else if (starpoint(boardSize, i, j)) {
           print("+ ")
@@ -570,50 +569,50 @@ class FastBoard() {
   def starpoint(size: Short, x: Int, y: Int): Boolean = starpoint(size, y * size + x)
 
   def mergeStrings(ip: Short, aip: Short): Unit = {
-    assert(ip != m_maxsq && aip != m_maxsq)
-    m_stones(ip) += m_stones(aip) // merge stones
+    assert(ip != maxSq && aip != maxSq)
+    stones(ip) += stones(aip) // merge stones
     var newpos = aip              // loop over stones, update parents
 
     do {
       // check if this stone has a liberty
       for (k <- 0 until 4) {
-        val ai = newpos + m_dirs(k)
+        val ai = newpos + directions(k)
         // for each liberty, check if it is not shared
-        if (m_square(ai) == EMPTY) {
+        if (square(ai) == EMPTY) {
           // find liberty neighbors
           var found = false
           var kk = 0
           while (kk < 4 && !found) {
-            val aai = ai + m_dirs(kk)
+            val aai = ai + directions(kk)
             // Friendly string shouldn't be ip. ip can also be an aip that has been marked.
-            if (m_parent(aai) == ip) {
+            if (parent(aai) == ip) {
               found = true
             }
             kk += 1
           }
 
-          if (!found) m_libs(ip) += 1
+          if (!found) liberties(ip) += 1
         }
       }
 
-      m_parent(newpos) = ip
-      newpos = m_next(newpos)
+      parent(newpos) = ip
+      newpos = next(newpos)
     } while (newpos != aip)
 
     // merge strings
-    val tmp = m_next(aip)
-    m_next(aip) = m_next(ip)
-    m_next(ip) = tmp
+    val tmp = next(aip)
+    next(aip) = next(ip)
+    next(ip) = tmp
   }
 
   /** @return the captureted square, if any. Else -1 */
   def updateBoardEye(color: Short, i: Short): Short = {
-    m_square(i)  = color.toByte
-    m_next(i) = i
-    m_parent(i) = i
-    m_libs(i) = 0
-    m_stones(i)  = 1
-    m_totalstones(color) += 1
+    square(i)  = color.toByte
+    next(i) = i
+    parent(i) = i
+    liberties(i) = 0
+    stones(i)  = 1
+    totalStones(color) += 1
 
     addNeighbor(i, color)
 
@@ -621,10 +620,10 @@ class FastBoard() {
     var captured_stones = 0
 
     for (k <- 0 until 4) {
-      val ai = i + m_dirs(k)
-      assert(ai >= 0 && ai <= m_maxsq)
+      val ai = i + directions(k)
+      assert(ai >= 0 && ai <= maxSq)
 
-      if (m_libs(m_parent(ai)) <= 0) {
+      if (liberties(parent(ai)) <= 0) {
         val this_captured = removeStringFast(ai.toShort)
         captured_sq = ai
         captured_stones += this_captured
@@ -632,11 +631,11 @@ class FastBoard() {
     }
 
     // move last vertex in list to our position
-    m_empty_cnt -= 1
-    val lastvertex = m_empty(m_empty_cnt)
-    m_empty_idx(lastvertex) = m_empty_idx(i)
-    m_empty(m_empty_idx(i)) = lastvertex
-    m_prisoners(color) += captured_stones
+    emptyCnt -= 1
+    val lastvertex = emptySquare(emptyCnt)
+    emptyIdx(lastvertex) = emptyIdx(i)
+    emptySquare(emptyIdx(i)) = lastvertex
+    prisoners(color) += captured_stones
 
     // possibility of ko
     if (captured_stones == 1) {
@@ -652,10 +651,10 @@ class FastBoard() {
     * @return (ko square, capture) If no capture then return (-1, false)
     */
   def updateBoardFast(color: Short, i: Short): (Int, Boolean) = {
-    assert(m_square(i) == EMPTY)
+    assert(square(i) == EMPTY)
     assert(color == WHITE || color == BLACK)
 
-    val eyeplay: Boolean = (m_neighbors(i) & EYE_MASK(otherColor(color))) > 0   // did we play into an opponent eye?
+    val eyeplay: Boolean = (neighbors(i) & EYE_MASK(otherColor(color))) > 0   // did we play into an opponent eye?
 
     // because we check for single stone suicide, we know it's a capture, and it might be a ko capture
     var capture = false
@@ -663,32 +662,32 @@ class FastBoard() {
       return (updateBoardEye(color, i), true)
     }
 
-    m_square(i) = color.toByte
-    m_next(i) = i
-    m_parent(i) = i
-    m_libs(i) = countPliberties(i)
-    m_stones(i) = 1
-    m_totalstones(color) += 1
+    square(i) = color.toByte
+    next(i) = i
+    parent(i) = i
+    liberties(i) = countPliberties(i)
+    stones(i) = 1
+    totalStones(color) += 1
 
     addNeighbor(i, color)
 
     for (k <- 0 until 4) {
-      val ai = i + m_dirs(k)
+      val ai = i + directions(k)
 
-      if (m_square(ai) <= WHITE) {
-        assert(ai >= 0 && ai <= m_maxsq)
+      if (square(ai) <= WHITE) {
+        assert(ai >= 0 && ai <= maxSq)
 
-        if (m_square(ai) == otherColor(color)) {
-          if (m_libs(m_parent(ai)) <= 0) {
+        if (square(ai) == otherColor(color)) {
+          if (liberties(parent(ai)) <= 0) {
             capture = true
-            m_prisoners(color) += removeStringFast(ai.toShort)
+            prisoners(color) += removeStringFast(ai.toShort)
           }
-        } else if (m_square(ai) == color) {
-          val ip  = m_parent(i)
-          val aip = m_parent(ai)
+        } else if (square(ai) == color) {
+          val ip  = parent(i)
+          val aip = parent(ai)
 
           if (ip != aip) {
-            if (m_stones(ip) >= m_stones(aip)) {
+            if (stones(ip) >= stones(aip)) {
               mergeStrings(ip, aip)
             } else {
               mergeStrings(aip, ip)
@@ -699,21 +698,21 @@ class FastBoard() {
     }
 
     /* move last vertex in list to our position */
-    m_empty_cnt -= 1
-    val lastvertex = m_empty(m_empty_cnt)
-    m_empty_idx(lastvertex) = m_empty_idx(i)
-    m_empty(m_empty_idx(i)) = lastvertex
-    assert(m_libs(m_parent(i)) < boardSize * boardSize)
+    emptyCnt -= 1
+    val lastvertex = emptySquare(emptyCnt)
+    emptyIdx(lastvertex) = emptyIdx(i)
+    emptySquare(emptyIdx(i)) = lastvertex
+    assert(liberties(parent(i)) < boardSize * boardSize)
 
     /* check whether we still live (i.e. detect suicide) */
-    if (m_libs(m_parent(i)) == 0) removeStringFast(i)
+    if (liberties(parent(i)) == 0) removeStringFast(i)
 
     (-1, capture)
   }
 
   /** check for 4 neighbors of the same color */
   def isEye(color: Short, i: Short): Boolean = {
-    val ownSurrounded = (m_neighbors(i) & EYE_MASK(color)) > 0
+    val ownSurrounded = (neighbors(i) & EYE_MASK(color)) > 0
 
     // If not, it can't be an eye.
     // This takes advantage of borders being colored both ways.
@@ -724,10 +723,10 @@ class FastBoard() {
     // 2 or more diagonals taken; 1 for side groups
     val colorcount = Array.fill[Int](4)(0)
 
-    colorcount(m_square(i - 1 - boardSize - 2)) += 1
-    colorcount(m_square(i + 1 - boardSize - 2)) += 1
-    colorcount(m_square(i - 1 + boardSize + 2)) += 1
-    colorcount(m_square(i + 1 + boardSize + 2)) += 1
+    colorcount(square(i - 1 - boardSize - 2)) += 1
+    colorcount(square(i + 1 - boardSize - 2)) += 1
+    colorcount(square(i - 1 + boardSize + 2)) += 1
+    colorcount(square(i + 1 + boardSize + 2)) += 1
 
     if (colorcount(INVALID) == 0) {
       if (colorcount(otherColor(color)) > 1) return false
@@ -740,7 +739,7 @@ class FastBoard() {
     val (row, column) = getCoord(move)
     var result = ""
 
-    if (move >= 0 && move <= m_maxsq) {
+    if (move >= 0 && move <= maxSq) {
       result += (if (column < 8) 'A' + column else 'A' + column + 1)
       result += (row + 1)
     } else if (move == PASS) {
@@ -761,7 +760,7 @@ class FastBoard() {
     row = boardSize - row - 1
     var result = ""
 
-    if (move >= 0 && move <= m_maxsq) {
+    if (move >= 0 && move <= maxSq) {
       if (column <= 25) {
         result += ('a' + column)
       } else {
@@ -807,49 +806,49 @@ class FastBoard() {
 
   def getPrisoners(side: Short): Int = {
     assert(side == WHITE || side == BLACK)
-    m_prisoners(side)
+    prisoners(side)
   }
 
-  def blackToMove(): Boolean = m_tomove == BLACK
-  def getToMove: Byte = m_tomove
-  def setToMove(tomove: Byte): Unit = { m_tomove = tomove }
+  def blackToMove(): Boolean = toMove == BLACK
+  def getToMove: Byte = toMove
+  def setToMove(tomove: Byte): Unit = { toMove = tomove }
 
   def getGroupId(vertex: Int): Int = {
-    assert(m_square(vertex) == WHITE || m_square(vertex) == BLACK)
-    assert(m_parent(vertex) == m_parent(m_parent(vertex)))
-    m_parent(vertex)
+    assert(square(vertex) == WHITE || square(vertex) == BLACK)
+    assert(parent(vertex) == parent(parent(vertex)))
+    parent(vertex)
   }
 
   def getStringStones(vertex: Int): Seq[Int] = {
-    val start = m_parent(vertex)
-    var res: Seq[Int] = Seq() //Array.ofDim(m_stones(start))
+    val start = parent(vertex)
+    var res: Seq[Int] = Seq() //Array.ofDim(stones(start))
     var newpos = start
 
     do {
-      assert(m_square(newpos) == m_square(vertex))
+      assert(square(newpos) == square(vertex))
       res :+= newpos.toInt
-      newpos = m_next(newpos)
+      newpos = next(newpos)
     } while (newpos != start)
     res
   }
 
   def getString(vertex: Int): String = {
     var result: String = ""
-    val start = m_parent(vertex)
+    val start = parent(vertex)
     var newpos = start
 
     do {
       result += moveToText(newpos) + " "
-      newpos = m_next(newpos)
+      newpos = next(newpos)
     } while (newpos != start)
 
     result.substring(0, result.length - 1) // remove last space
   }
 
   def fastInAtari(vertex: Int): Boolean = {
-    assert((m_square(vertex) < EMPTY) || (m_libs(m_parent(vertex)) > m_maxsq))
-    val parent = m_parent(vertex)
-    m_libs(parent) == 1
+    assert((square(vertex) < EMPTY) || (liberties(parent(vertex)) > maxSq))
+    val theParent = parent(vertex)
+    liberties(theParent) == 1
   }
 
   /**
@@ -857,33 +856,33 @@ class FastBoard() {
     * @return 0 if not in atari, position of single liberty if it is
     */
   def inAtari(vertex: Short): Int = {
-    assert(m_square(vertex) < EMPTY)
+    assert(square(vertex) < EMPTY)
 
-    if (m_libs(m_parent(vertex)) > 1) {
+    if (liberties(parent(vertex)) > 1) {
       return 0
     }
 
-    assert(m_libs(m_parent(vertex)) == 1)
+    assert(liberties(parent(vertex)) == 1)
     var pos = vertex
 
     do {
       if (countPliberties(pos) > 0) {
         for (k <- 0 until 4) {
-          val ai = pos + m_dirs(k)
-          if (m_square(ai) == EMPTY) {
+          val ai = pos + directions(k)
+          if (square(ai) == EMPTY) {
             return ai
           }
         }
       }
 
-      pos = m_next(pos)
+      pos = next(pos)
     } while (pos != vertex)
     assert(false)  // should be unreachable
     0
   }
 
-  def getDir(i: Int): Int = m_dirs(i)
-  def getExtraDir(i: Int): Int = m_extradirs(i)
+  def getDir(i: Int): Int = directions(i)
+  def getExtraDir(i: Int): Int = extraDirections(i)
 
   def getStoneList: String = {
     var res: String = ""
@@ -901,12 +900,12 @@ class FastBoard() {
   }
 
   def stringSize(vertex: Int): Int = {
-    assert(vertex > 0 && vertex < m_maxsq)
-    assert(m_square(vertex) == WHITE || m_square(vertex) == BLACK)
-    m_stones(m_parent(vertex))
+    assert(vertex > 0 && vertex < maxSq)
+    assert(square(vertex) == WHITE || square(vertex) == BLACK)
+    stones(parent(vertex))
   }
 
-  def countRLiberties(vertex: Int): Int = m_libs(m_parent(vertex))
+  def countRLiberties(vertex: Int): Int = liberties(parent(vertex))
 
   def mergedStringSize(color: Short, vertex: Int): Int = {
     var totalSize = 0
@@ -914,15 +913,15 @@ class FastBoard() {
     var nbrCount = 0
 
     for (k <- 0 until 4) {
-      val ai = vertex + m_dirs(k)
+      val ai = vertex + directions(k)
 
       if (getSquare(ai) == color) {
-        val parent = m_parent(ai)
+        val theParent = parent(ai)
 
         var found = false
         var i = 0
         while (i < nbrCount && !found) {
-          if (nbrParent(i) == parent) {
+          if (nbrParent(i) == theParent) {
             found = true
           }
           i += 1
@@ -930,7 +929,7 @@ class FastBoard() {
 
         if (!found) {
           totalSize += stringSize(ai)
-          nbrParent(nbrCount) = parent
+          nbrParent(nbrCount) = theParent
           nbrCount += 1
         }
       }
