@@ -308,7 +308,6 @@ class FastBoard() {
 
   private def removeNeighbor(idx: Short, color: Short): Unit = {
     assert(color == WHITE || color == BLACK || color == EMPTY)
-
     val nbrPars = Array[Short](4)
     var nbr_par_cnt: Short = 0
 
@@ -666,9 +665,10 @@ class FastBoard() {
   }
 
   /**
+    * Returns ko square or suicide tag. Does not update side to move.
     * @param color player who placed a stone
     * @param i position
-    * @return (captured square, capture) If no capture then return (-1, false)
+    * @return (ko square, capture) If no capture then return (-1, false)
     */
   def updateBoardFast(color: Short, i: Short): (Int, Boolean) = {
     assert(m_square(i) == EMPTY)
@@ -729,175 +729,84 @@ class FastBoard() {
 
     (-1, capture)
   }
-  /*
-  /*
-      returns ko square or suicide tag
-      does not update side to move
-  */
-  int FastBoard::update_board_fast(const int color, const int i, bool & capture) {
-    assert(m_square[i] == EMPTY);
-    assert(color == WHITE || color == BLACK);
 
-    /* did we play into an opponent eye? */
-    int eyeplay = (m_neighbors[i] & s_eyemask[!color]);
+  /** check for 4 neighbors of the same color */
+  def isEye(color: Short, i: Short): Boolean = {
+    val ownSurrounded = (m_neighbors(i) & EYE_MASK(color)) > 0
 
-    // because we check for single stone suicide, we know
-    // its a capture, and it might be a ko capture
-    if (eyeplay) {
-      capture = true;
-      return update_board_eye(color, i);
+    // If not, it can't be an eye.
+    // This takes advantage of borders being colored both ways.
+    if (!ownSurrounded) {
+      return false
     }
 
-    m_square[i]  = (square_t)color;
-    m_next[i]    = i;
-    m_parent[i]  = i;
-    m_libs[i]    = count_pliberties(i);
-    m_stones[i]  = 1;
-    m_totalstones[color]++;
+    // 2 or more diagonals taken; 1 for side groups
+    val colorcount = Array.fill[Short](4)(0)
 
-    add_neighbor(i, color);
+    colorcount(m_square(i - 1 - boardSize - 2)) += 1
+    colorcount(m_square(i + 1 - boardSize - 2)) += 1
+    colorcount(m_square(i - 1 + boardSize + 2)) += 1
+    colorcount(m_square(i + 1 + boardSize + 2)) += 1
 
-    for (int k = 0; k < 4; k++) {
-      int ai = i + m_dirs[k];
-
-      if (m_square[ai] > WHITE) continue;
-
-      assert(ai >= 0 && ai <= m_maxsq);
-
-      if (m_square[ai] == !color) {
-        if (m_libs[m_parent[ai]] <= 0) {
-          capture = true;
-          m_prisoners[color] += remove_string_fast(ai);
-        }
-      } else if (m_square[ai] == color) {
-        int ip  = m_parent[i];
-        int aip = m_parent[ai];
-
-        if (ip != aip) {
-          if (m_stones[ip] >= m_stones[aip]) {
-            merge_strings(ip, aip);
-          } else {
-            merge_strings(aip, ip);
-          }
-        }
-      }
+    if (colorcount(INVALID) == 0) {
+      if (colorcount(otherColor(color)) > 1) return false
     }
-
-    /* move last vertex in list to our position */
-    int lastvertex               = m_empty[--m_empty_cnt];
-    m_empty_idx[lastvertex]      = m_empty_idx[i];
-    m_empty[m_empty_idx[i]]      = lastvertex;
-
-    assert(m_libs[m_parent[i]] < m_boardsize*m_boardsize);
-
-    /* check whether we still live (i.e. detect suicide) */
-    if (m_libs[m_parent[i]] == 0) {
-      remove_string_fast(i);
-    }
-
-    return -1;
+    else if (colorcount(otherColor(color)) > 0) return false
+    true
   }
 
-  bool FastBoard::is_eye(const int color, const int i) {
-    /* check for 4 neighbors of the same color */
-    int ownsurrounded = (m_neighbors[i] & s_eyemask[color]);
-
-    // if not, it can't be an eye
-    // this takes advantage of borders being colored
-    // both ways
-    if (!ownsurrounded) {
-      return false;
-    }
-
-    // 2 or more diagonals taken
-    // 1 for side groups
-    int colorcount[4];
-
-    colorcount[BLACK] = 0;
-    colorcount[WHITE] = 0;
-    colorcount[INVAL] = 0;
-
-    colorcount[m_square[i - 1 - m_boardsize - 2]]++;
-    colorcount[m_square[i + 1 - m_boardsize - 2]]++;
-    colorcount[m_square[i - 1 + m_boardsize + 2]]++;
-    colorcount[m_square[i + 1 + m_boardsize + 2]]++;
-
-    if (colorcount[INVAL] == 0) {
-      if (colorcount[!color] > 1) {
-        return false;
-      }
-    } else {
-      if (colorcount[!color]) {
-        return false;
-      }
-    }
-
-    return true;
-  }
-
-  std::string FastBoard::move_to_text(int move) {
-    std::ostringstream result;
-
-    int column = move % (m_boardsize + 2);
-    int row = move / (m_boardsize + 2);
-
-    column--;
-    row--;
-
-    assert(move == FastBoard::PASS || move == FastBoard::RESIGN || (row >= 0 && row < m_boardsize));
-    assert(move == FastBoard::PASS || move == FastBoard::RESIGN || (column >= 0 && column < m_boardsize));
+  def moveToText(move: Int): String = {
+    val (row, column) = getCoord(move)
+    var result = ""
 
     if (move >= 0 && move <= m_maxsq) {
-      result << static_cast<char>(column < 8 ? 'A' + column : 'A' + column + 1);
-      result << (row + 1);
-    } else if (move == FastBoard::PASS) {
-      result << "pass";
-    } else if (move == FastBoard::RESIGN) {
-      result << "resign";
+      result += (if (column < 8) 'A' + column else 'A' + column + 1)
+      result += (row + 1)
+    } else if (move == PASS) {
+      result += "pass"
+    } else if (move == RESIGN) {
+      result += "resign"
     } else {
-      result << "error";
+      result += "error"
     }
 
-    return result.str();
+    result
   }
 
-  std::string FastBoard::move_to_text_sgf(int move) {
-    std::ostringstream result;
-
-    int column = move % (m_boardsize + 2);
-    int row = move / (m_boardsize + 2);
-
-    column--;
-    row--;
-
-    assert(move == FastBoard::PASS || move == FastBoard::RESIGN || (row >= 0 && row < m_boardsize));
-    assert(move == FastBoard::PASS || move == FastBoard::RESIGN || (column >= 0 && column < m_boardsize));
+  def moveToTextSgf(move: Int): String = {
+    var (row, column) = getCoord(move)
 
     // SGF inverts rows
-    row = m_boardsize - row - 1;
+    row = boardSize - row - 1
+    var result = ""
 
     if (move >= 0 && move <= m_maxsq) {
       if (column <= 25) {
-        result << static_cast<char>('a' + column);
+        result += ('a' + column)
       } else {
-        result << static_cast<char>('A' + column - 26);
+        result  += ('A' + column - 26)
       }
       if (row <= 25) {
-        result << static_cast<char>('a' + row);
+        result += ('a' + row)
       } else {
-        result << static_cast<char>('A' + row - 26);
+        result += ('A' + row - 26)
       }
-    } else if (move == FastBoard::PASS) {
-      result << "tt";
-    } else if (move == FastBoard::RESIGN) {
-      result << "tt";
-    } else {
-      result << "error";
     }
-
-    return result.str();
+    else if (move == PASS) { result += "tt" }
+    else if (move == RESIGN) { result += "tt" }
+    else { result += "error" }
+    result
   }
 
+  private def getCoord(move: Int): (Int, Int) = {
+    var column = move % (boardSize + 2) - 1
+    var row = move / (boardSize + 2) - 1
+    assert(move == PASS || move == RESIGN || (row >= 0 && row < boardSize))
+    assert(move == PASS || move == RESIGN || (column >= 0 && column < boardSize))
+    (row , column)
+  }
+
+  /*
   int FastBoard::text_to_move(std::string move) {
     if (move.size() == 0 || move == "pass") {
       return FastBoard::PASS;
