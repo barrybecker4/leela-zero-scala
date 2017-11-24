@@ -44,9 +44,9 @@ object FastBoard {
 /**
   * Manages moves on the go board.
   */
-class FastBoard() {
+class FastBoard(size: Short = MAX_BOARD_SIZE) {
 
-  private var boardSize: Short = MAX_BOARD_SIZE
+  private var boardSize: Short = size
   private var scoreMoves: Seq[MoveScore] = _
 
   private var square: Array[Byte] = _    // Board contents         std::array<square_t, MAXSQ>
@@ -65,9 +65,11 @@ class FastBoard() {
   private var emptyCnt: Int = _
   private var toMove: Byte = _
   private var maxSq: Short = _
+  resetBoard(boardSize)
 
   def getBoardSize: Short = boardSize
 
+  /** @return index into 1d board arrays from the x, y coordinate */
   def getVertex(x: Short, y: Short): Short = {
     assert(x >= 0 && x < boardSize)
     assert(y >= 0 && y < boardSize)
@@ -78,6 +80,7 @@ class FastBoard() {
 
   def getVertex(x: Int, y: Int): Short = getVertex(x.toShort, y.toShort)
 
+  /** @return the x,y coordinate from the 1d index */
   def getXY(vertex: Short): Point = {
     val x: Short = ((vertex % (boardSize + 2)) - 1).toShort
     val y: Short = ((vertex / (boardSize + 2)) - 1).toShort

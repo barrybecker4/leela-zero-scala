@@ -7,8 +7,7 @@ class FastBoardSuite extends FunSuite {
 
 
   test("Create an empty 3x3 board") {
-    val b = new FastBoard()
-    b.resetBoard(3)
+    val b = new FastBoard(3)
     assertResult(clean("""
         |   a b c
         | 3 . . .  3
@@ -35,8 +34,7 @@ class FastBoardSuite extends FunSuite {
   }
 
   test("Create an empty 19x19 board") {
-    val b = new FastBoard()
-    b.resetBoard(19)
+    val b = new FastBoard(19)
     assertResult(clean("""
        |   a b c d e f g h j k l m n o p q r s t
        |19 . . . . . . . . . . . . . . . . . . . 19
@@ -61,5 +59,26 @@ class FastBoardSuite extends FunSuite {
        |   a b c d e f g h j k l m n o p q r s t
        |
        |""")) {b.toString}
+  }
+
+  test("get vertex on 19x19") {
+    val b = new FastBoard()
+    assertResult(22) {b.getVertex(0, 0)}
+    assertResult(43) {b.getVertex(0, 1)}
+    assertResult(44) {b.getVertex(1, 1)}
+    assertResult(87) {b.getVertex(2, 3)}
+    assertResult(418) {b.getVertex(18, 18)}
+  }
+
+  test("getXY from vertex") {
+    val b = new FastBoard()
+    assertResult((0, 0)) {b.getXY(22)}
+    assertResult((0, 1)) {b.getXY(43)}
+    assertResult((1, 1)) {b.getXY(44)}
+    assertResult((2, 3)) {b.getXY(87)}
+    assertResult((18, 18)) {b.getXY(418)}
+    assertThrows[AssertionError] {
+      b.getXY(7)
+    }
   }
 }
