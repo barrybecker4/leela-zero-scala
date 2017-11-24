@@ -471,7 +471,7 @@ class FastBoard() {
         result += (if ('A' + (i - 25) < 'I') 'A' + (i - 25) else 'A' + (i - 25) + 1).toChar + " "
       }
     }
-    result + "\n"
+    result.substring(0, result.length - 1) + "\n"
   }
 
   def displayLiberties(lastMove: Short):  Unit = {
