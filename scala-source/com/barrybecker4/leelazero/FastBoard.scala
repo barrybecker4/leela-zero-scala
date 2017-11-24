@@ -833,153 +833,108 @@ class FastBoard() {
 
     res
   }
-  /*
-  std::string FastBoard::get_string(int vertex) {
-    std::string result;
 
-    int start = m_parent[vertex];
-    int newpos = start;
+  def getString(vertex: Int): String = {
+    var result: String = ""
+    val start = m_parent(vertex)
+    var newpos = start
 
     do {
-      result += move_to_text(newpos) + " ";
-      newpos = m_next[newpos];
-    } while (newpos != start);
+      result += moveToText(newpos) + " "
+      newpos = m_next(newpos)
+    } while (newpos != start)
 
-    // eat last space
-    result.resize(result.size() - 1);
-
-    return result;
+    result.substring(0, result.length - 1) // remove last space
   }
 
-  bool FastBoard::fast_in_atari(int vertex) {
-    assert((m_square[vertex] < EMPTY) || (m_libs[m_parent[vertex]] > MAXSQ));
-
-    int par = m_parent[vertex];
-    int lib = m_libs[par];
-
-    return lib == 1;
+  def fastInAtari(vertex: Int): Boolean = {
+    assert((m_square(vertex) < EMPTY) || (m_libs(m_parent(vertex)) > MAXSQ))
+    val parent = m_parent(vertex)
+    m_libs(parent) == 1
   }
 
-  // check if string is in atari, returns 0 if not,
-  // single liberty if it is
-  int FastBoard::in_atari(int vertex) {
-    assert(m_square[vertex] < EMPTY);
+  /**
+    * @param vertex the vertex to check if in atari
+    * @return 0 if not in atari, position of single liberty if it is
+    */
+  def inAtari(vertex: Short): Int = {
+    assert(m_square(vertex) < EMPTY)
 
-    if (m_libs[m_parent[vertex]] > 1) {
-      return false;
+    if (m_libs(m_parent(vertex)) > 1) {
+      return 0
     }
 
-    assert(m_libs[m_parent[vertex]] == 1);
-
-    int pos = vertex;
+    assert(m_libs(m_parent(vertex)) == 1)
+    var pos = vertex
 
     do {
-      if (count_pliberties(pos)) {
-        for (int k = 0; k < 4; k++) {
-          int ai = pos + m_dirs[k];
-          if (m_square[ai] == EMPTY) {
-            return ai;
+      if (countPliberties(pos) > 0) {
+        for (k <- 0 until 4) {
+          val ai = pos + m_dirs(k)
+          if (m_square(ai) == EMPTY) {
+            return ai
           }
         }
       }
 
-      pos = m_next[pos];
-    } while (pos != vertex);
-
-    assert(false);
-
-    return false;
-  }
-  int FastBoard::get_dir(int i) {
-    return m_dirs[i];
+      pos = m_next(pos)
+    } while (pos != vertex)
+    assert(false)  // should be unreachable
+    0
   }
 
-  int FastBoard::get_extra_dir(int i) {
-    return m_extradirs[i];
-  }
+  def getDir(i: Int): Int = m_dirs(i)
+  def getExtraDir(i: Int): Int = m_extradirs(i)
+  def getStoneList: String = {
+    var res: String = ""
 
-  std::string FastBoard::get_stone_list() {
-    std::string res;
+    for (i <- 0 until boardSize) {
+      for (j <- 0 until boardSize) {
+        val vertex: Int = getVertex(i, j)
 
-    for (int i = 0; i < m_boardsize; i++) {
-      for (int j = 0; j < m_boardsize; j++) {
-        int vertex = get_vertex(i, j);
-
-        if (get_square(vertex) != EMPTY) {
-          res += move_to_text(vertex) + " ";
+        if (getSquare(vertex) != EMPTY) {
+          res += moveToText(vertex) + " "
         }
       }
     }
-
-    // eat final space
-    res.resize(res.size() - 1);
-
-    return res;
+    res.substring(0, res.length - 1) // remove final space
   }
 
-  int FastBoard::string_size(int vertex) {
-    assert(vertex > 0 && vertex < m_maxsq);
-    assert(m_square[vertex] == WHITE || m_square[vertex] == BLACK);
-
-    return m_stones[m_parent[vertex]];
+  def stringSize(vertex: Int): Int = {
+    assert(vertex > 0 && vertex < m_maxsq)
+    assert(m_square(vertex) == WHITE || m_square(vertex) == BLACK)
+    m_stones(m_parent(vertex))
   }
 
-  int FastBoard::count_rliberties(int vertex) {
-    /*std::vector<bool> marker(m_maxsq, false);
+  def countRLiberties(vertex: Int): Int = m_libs(m_parent(vertex))
 
-    int pos = vertex;
-    int liberties = 0;
-    int color = m_square[vertex];
+  def mergedStringSize(color: Short, vertex: Int): Int = {
+    var totalSize = 0
+    val nbrParent = Array.ofDim[Int](4)
+    var nbrCount = 0
 
-    assert(color == WHITE || color == BLACK);
+    for (k <- 0 until 4) {
+      val ai = vertex + m_dirs(k)
 
-    do {
-        assert(m_square[pos] == color);
+      if (getSquare(ai) == color) {
+        val parent = m_parent(ai)
 
-        for (int k = 0; k < 4; k++) {
-            int ai = pos + m_dirs[k];
-            if (m_square[ai] == EMPTY) {
-                if (!marker[ai]) {
-                    liberties++;
-                    marker[ai] = true;
-                }
-            }
-        }
-        pos = m_next[pos];
-    } while (pos != vertex);
-
-    return liberties;*/
-    return m_libs[m_parent[vertex]];
-  }
-
-  int FastBoard::merged_string_size(int color, int vertex) {
-    int totalsize = 0;
-    std::array<int, 4> nbrpar;
-    int nbrcnt = 0;
-
-    for (int k = 0; k < 4; k++) {
-      int ai = vertex + m_dirs[k];
-
-      if (get_square(ai) == color) {
-        int par = m_parent[ai];
-
-        bool found = false;
-        for (int i = 0; i < nbrcnt; i++) {
-          if (nbrpar[i] == par) {
-            found = true;
-            break;
+        var found = false
+        var i = 0
+        while (i < nbrCount && !found) {
+          if (nbrParent(i) == parent) {
+            found = true
           }
+          i += 1
         }
 
         if (!found) {
-          totalsize += string_size(ai);
-          nbrpar[nbrcnt++] = par;
+          totalSize += stringSize(ai)
+          nbrParent(nbrCount) = parent
+          nbrCount += 1
         }
       }
-
     }
-
-    return totalsize;
+    totalSize
   }
-*/
 }
