@@ -1,6 +1,7 @@
 package com.barrybecker4.leelazero
 
 import org.scalatest.FunSuite
+import FastBoard._
 import TestUtil._
 
 class FastBoardSuite extends FunSuite {
@@ -35,6 +36,7 @@ class FastBoardSuite extends FunSuite {
 
   test("Create an empty 19x19 board") {
     val b = new FastBoard(19)
+    b.setSquare(b.getVertex(2, 1), BLACK)
     assertResult(clean("""
        |   a b c d e f g h j k l m n o p q r s t
        |19 . . . . . . . . . . . . . . . . . . . 19
@@ -54,7 +56,7 @@ class FastBoardSuite extends FunSuite {
        | 5 . . . . . . . . . . . . . . . . . . .  5
        | 4 . . . + . . . . . + . . . . . + . . .  4
        | 3 . . . . . . . . . . . . . . . . . . .  3
-       | 2 . . . . . . . . . . . . . . . . . . .  2
+       | 2 . . X . . . . . . . . . . . . . . . .  2
        | 1 . . . . . . . . . . . . . . . . . . .  1
        |   a b c d e f g h j k l m n o p q r s t
        |
@@ -75,10 +77,81 @@ class FastBoardSuite extends FunSuite {
     assertResult((0, 0)) {b.getXY(22)}
     assertResult((0, 1)) {b.getXY(43)}
     assertResult((1, 1)) {b.getXY(44)}
+    assertResult((2, 1)) {b.getXY(45)}
     assertResult((2, 3)) {b.getXY(87)}
     assertResult((18, 18)) {b.getXY(418)}
     assertThrows[AssertionError] {
       b.getXY(7)
     }
+  }
+
+  test("set/getSquare contents") {
+    val b = new FastBoard()
+    assertResult(EMPTY) { b.getSquare(43)}
+    assertResult(EMPTY) { b.getSquare(0, 1)}
+    b.setSquare(43, BLACK)
+    assertResult(BLACK) { b.getSquare(43)}
+    b.setSquare(43, WHITE)
+    assertResult(WHITE) { b.getSquare(43)}
+  }
+
+  test("rotateVertex (2, 1)") {
+    val b = new FastBoard()
+    for (i <- 0  to 7)
+      b.setSquare(b.rotateVertex(b.getVertex(2, 1), i.toShort), BLACK)
+    assertResult(clean("""
+                         |   a b c d e f g h j k l m n o p q r s t
+                         |19 . . . . . . . . . . . . . . . . . . . 19
+                         |18 . . X . . . . . . . . . . . . . X . . 18
+                         |17 . X . . . . . . . . . . . . . . . X . 17
+                         |16 . . . + . . . . . + . . . . . + . . . 16
+                         |15 . . . . . . . . . . . . . . . . . . . 15
+                         |14 . . . . . . . . . . . . . . . . . . . 14
+                         |13 . . . . . . . . . . . . . . . . . . . 13
+                         |12 . . . . . . . . . . . . . . . . . . . 12
+                         |11 . . . . . . . . . . . . . . . . . . . 11
+                         |10 . . . + . . . . . + . . . . . + . . . 10
+                         | 9 . . . . . . . . . . . . . . . . . . .  9
+                         | 8 . . . . . . . . . . . . . . . . . . .  8
+                         | 7 . . . . . . . . . . . . . . . . . . .  7
+                         | 6 . . . . . . . . . . . . . . . . . . .  6
+                         | 5 . . . . . . . . . . . . . . . . . . .  5
+                         | 4 . . . + . . . . . + . . . . . + . . .  4
+                         | 3 . X . . . . . . . . . . . . . . . X .  3
+                         | 2 . . X . . . . . . . . . . . . . X . .  2
+                         | 1 . . . . . . . . . . . . . . . . . . .  1
+                         |   a b c d e f g h j k l m n o p q r s t
+                         |
+                         |""")) {b.toString}
+  }
+
+  test("rotateVertex (1, 0)") {
+    val b = new FastBoard()
+    for (i <- 0  to 7)
+      b.setSquare(b.rotateVertex(b.getVertex(1, 0), i.toShort), BLACK)
+    assertResult(clean("""
+                         |   a b c d e f g h j k l m n o p q r s t
+                         |19 . X . . . . . . . . . . . . . . . X . 19
+                         |18 X . . . . . . . . . . . . . . . . . X 18
+                         |17 . . . . . . . . . . . . . . . . . . . 17
+                         |16 . . . + . . . . . + . . . . . + . . . 16
+                         |15 . . . . . . . . . . . . . . . . . . . 15
+                         |14 . . . . . . . . . . . . . . . . . . . 14
+                         |13 . . . . . . . . . . . . . . . . . . . 13
+                         |12 . . . . . . . . . . . . . . . . . . . 12
+                         |11 . . . . . . . . . . . . . . . . . . . 11
+                         |10 . . . + . . . . . + . . . . . + . . . 10
+                         | 9 . . . . . . . . . . . . . . . . . . .  9
+                         | 8 . . . . . . . . . . . . . . . . . . .  8
+                         | 7 . . . . . . . . . . . . . . . . . . .  7
+                         | 6 . . . . . . . . . . . . . . . . . . .  6
+                         | 5 . . . . . . . . . . . . . . . . . . .  5
+                         | 4 . . . + . . . . . + . . . . . + . . .  4
+                         | 3 . . . . . . . . . . . . . . . . . . .  3
+                         | 2 X . . . . . . . . . . . . . . . . . X  2
+                         | 1 . X . . . . . . . . . . . . . . . X .  1
+                         |   a b c d e f g h j k l m n o p q r s t
+                         |
+                         |""")) {b.toString}
   }
 }

@@ -71,8 +71,8 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
 
   /** @return index into 1d board arrays from the x, y coordinate */
   def getVertex(x: Short, y: Short): Short = {
-    assert(x >= 0 && x < boardSize)
-    assert(y >= 0 && y < boardSize)
+    assert(x >= 0 && x < boardSize, "x out of range: " + x)
+    assert(y >= 0 && y < boardSize, "y out of range: " + y)
     val vertex: Short = (((y + 1) * (boardSize + 2)) + (x + 1)).toShort
     assert(vertex >= 0 && vertex < maxSq)
     vertex
@@ -105,7 +105,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
   def getSquare(x: Int, y: Int): Byte = getSquare(getVertex(x, y))
   def setSquare(x: Int, y: Int, content: Byte): Unit = setSquare(getVertex(x, y), content)
 
-  /** Take advantage of board symmetry to rotate a given position */
+  /** Take advantage of the 8 fold board symmetry to rotate a given position */
   def rotateVertex(vertex: Short, symmetry: Short): Short = {
     assert(symmetry >= 0 && symmetry <= 7)
     val xy: Point = getXY(vertex)
@@ -120,8 +120,8 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
       case 2 => (x, reverseY)
       case 3 => (reverseX, reverseY)
       case 4 => (y, x)
-      case 5 => ((y - 1).toShort, x)
-      case 6 => (y, (x - 1).toShort)
+      case 5 => (reverseY, x)
+      case 6 => (y, reverseX)
       case 7 => (reverseY, reverseX)
       case _ => throw new IllegalArgumentException("Unexpected symmetry value: " + symmetry)
     }
