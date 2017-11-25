@@ -1,4 +1,4 @@
-package com.barrybecker4.leelazero
+package leelazero
 
 import org.scalatest.FunSuite
 import FastBoard._
@@ -154,4 +154,34 @@ class FastBoardSuite extends FunSuite {
                          |
                          |""")) {b.toString}
   }
+
+  test("isSuicide when not suicide (for black)") {
+      val b = new FastBoard(5)
+      b.setSquare(2, 2, WHITE)
+      assertResult(false) { b.isSuicide(b.getVertex(1, 1), BLACK) }
+      assertResult(false) { b.isSuicide(b.getVertex(2, 1), BLACK) }
+  }
+
+  /*
+  test("isSuicide when suicide (for black in all white field)") {
+    val b = new FastBoard(5)
+    b.setSquare(1, 2, WHITE)
+    b.setSquare(2, 1, WHITE)
+    b.setSquare(2, 2, WHITE)
+    b.setSquare(2, 3, WHITE)
+    b.setSquare(2, 4, WHITE)
+    b.setSquare(3, 2, WHITE)
+    b.setSquare(3, 4, WHITE)
+    b.setSquare(4, 3, WHITE)
+    b.setSquare(0, 2, WHITE)
+    b.setSquare(2, 0, WHITE)
+    println(b.toString())
+
+    assertResult(false) { b.isSuicide(b.getVertex(1, 1), BLACK) }
+    assertResult(true) {
+      val v = b.getVertex(3, 4)
+      b.isSuicide(v, BLACK)
+    }
+    assertResult(true) { b.isSuicide(b.getVertex(4, 4), BLACK) }
+  }*/
 }

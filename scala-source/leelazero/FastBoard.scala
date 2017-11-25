@@ -1,4 +1,4 @@
-package com.barrybecker4.leelazero
+package leelazero
 
 import FastBoard._
 
@@ -205,15 +205,13 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     next(maxSq) = maxSq
   }
 
-  def isSuicide(i: Short, color: Short): Boolean = {
-    if (countPliberties(i) > 0) {
-      return false
-    }
+  def isSuicide(vertex: Short, color: Short): Boolean = {
+    if (countPliberties(vertex) > 0) return false
 
     var connecting = false
 
     for (k <- 0 until 4) {
-      val ai = i + directions(k)
+      val ai = vertex + directions(k)
 
       val libs = liberties(parent(ai))
       if (getSquare(ai) == color) {
@@ -224,19 +222,19 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
         connecting = true
       } else {
         if (libs <= 1) {
-          // killing neighbor = never suicide
+          // killing a neighbor is never suicide
           return false
         }
       }
     }
 
-    addNeighbor(i, color)
+    addNeighbor(vertex, color)
 
     var opps_live = true
     var ours_die = true
 
     for (k <- 0 until 4) {
-      val ai = i + directions(k)
+      val ai = vertex + directions(k)
       val libs = liberties(parent(ai))
 
       if (libs == 0 && getSquare(ai) != color) {
@@ -246,31 +244,32 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
       }
     }
 
-    removeNeighbor(i, color)
+    removeNeighbor(vertex, color)
 
     if (!connecting) opps_live else opps_live && ours_die
   }
 
-  private def countPliberties(i: Short): Short = {
-    countNeighbors(EMPTY, i)
+  private def countPliberties(vertex: Short): Short = {
+    countNeighbors(EMPTY, vertex)
   }
 
   /**
-    * @return Count of neighbors of color c at vertex v the border of the board has fake neighours of both colors
+    * @return Count of neighbors of color c at vertex v.
+    *       The border of the board has fake neighours of both colors.
     */
-  private def countNeighbors(c: Short, v: Short): Short = {
+  private def countNeighbors(c: Short, vertex: Short): Short = {
     assert(c == WHITE || c == BLACK || c == EMPTY)
-    ((neighbors(v) >> (NBR_SHIFT * c)) & 7).toShort
+    ((neighbors(vertex) >> (NBR_SHIFT * c)) & 7).toShort
   }
 
-  private def addNeighbor(idx: Short, color: Short): Unit = {
+  private def addNeighbor(vertex: Short, color: Short): Unit = {
     assert(color == WHITE || color == BLACK || color == EMPTY)
 
     val nbrPars = Array[Short](4)
     var nbr_parent_cnt = 0
 
     for (k <- 0 until 4) {
-      val ai = idx + directions(k)
+      val ai = vertex + directions(k)
       neighbors(ai) += (1 << (NBR_SHIFT * color)) - (1 << (NBR_SHIFT * EMPTY))
 
       var found = false
@@ -289,13 +288,13 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     }
   }
 
-  private def removeNeighbor(idx: Short, color: Short): Unit = {
+  private def removeNeighbor(vertex: Short, color: Short): Unit = {
     assert(color == WHITE || color == BLACK || color == EMPTY)
     val nbrPars = Array[Short](4)
     var nbr_parent_cnt = 0
 
     for (k <- 0 until 4) {
-      val ai = idx + directions(k)
+      val ai = vertex + directions(k)
 
       neighbors(ai) += (1 << (NBR_SHIFT * EMPTY)) - (1 << (NBR_SHIFT * color))
 
@@ -319,22 +318,22 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     else if (color == WHITE) BLACK
     else throw new IllegalStateException("Unexpected color: " + color)
 
-  private def fastSsSuicide(color: Short, i: Short): Boolean = {
-    val eyePlay = neighbors(i) & EYE_MASK(otherColor(color))
+  private def fastSsSuicide(color: Short, vertex: Short): Boolean = {
+    val eyePlay = neighbors(vertex) & EYE_MASK(otherColor(color))
 
     if (eyePlay > 0) return false
 
-    !((liberties(parent(i - 1)) <= 1) ||
-      (liberties(parent(i + 1)) <= 1) ||
-      (liberties(parent(i + boardSize + 2)) <= 1) ||
-      (liberties(parent(i - boardSize - 2)) <= 1))
+    !((liberties(parent(vertex - 1)) <= 1) ||
+      (liberties(parent(vertex + 1)) <= 1) ||
+      (liberties(parent(vertex + boardSize + 2)) <= 1) ||
+      (liberties(parent(vertex - boardSize - 2)) <= 1))
   }
 
   /** @return the number of stones in the string that was removed */
-  private def removeStringFast(i: Short): Int = {
-    var pos: Short = i
+  private def removeStringFast(vertex: Short): Int = {
+    var pos: Short = vertex
     var removed = 0
-    val color = square(i)
+    val color = square(vertex)
     assert(color == WHITE || color == BLACK || color == EMPTY)
 
     do {
@@ -351,7 +350,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
 
       removed += 1
       pos = next(pos)
-    } while (pos != i)
+    } while (pos != vertex)
 
     removed
   }
@@ -360,8 +359,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     val bd = Array.fill[Boolean](maxSq)(false)
     var last = Array.fill[Boolean](maxSq)(false)
 
-    /* needs multi-pass propagation, slow */
-    do {
+    do {  //  needs multi-pass propagation, slow
       last = bd
       for (i <- 0 until boardSize) {
         for (j <- 0 until boardSize) {
@@ -608,7 +606,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     next(ip) = tmp
   }
 
-  /** @return the captureted square, if any. Else -1 */
+  /** @return the captured square, if any. Else -1 */
   def updateBoardEye(color: Short, i: Short): Short = {
     square(i)  = color.toByte
     next(i) = i
@@ -650,32 +648,32 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
   /**
     * Returns ko square or suicide tag. Does not update side to move.
     * @param color player who placed a stone
-    * @param i position
+    * @param vertex position
     * @return (ko square, capture) If no capture then return (-1, false)
     */
-  def updateBoardFast(color: Short, i: Short): (Int, Boolean) = {
-    assert(square(i) == EMPTY)
+  def updateBoardFast(color: Short, vertex: Short): (Int, Boolean) = {
+    assert(square(vertex) == EMPTY)
     assert(color == WHITE || color == BLACK)
 
-    val eyeplay: Boolean = (neighbors(i) & EYE_MASK(otherColor(color))) > 0   // did we play into an opponent eye?
+    val eyePlay: Boolean = (neighbors(vertex) & EYE_MASK(otherColor(color))) > 0   // did we play into an opponent eye?
 
     // because we check for single stone suicide, we know it's a capture, and it might be a ko capture
     var capture = false
-    if (eyeplay) {
-      return (updateBoardEye(color, i), true)
+    if (eyePlay) {
+      return (updateBoardEye(color, vertex), true)
     }
 
-    square(i) = color.toByte
-    next(i) = i
-    parent(i) = i
-    liberties(i) = countPliberties(i)
-    stones(i) = 1
+    square(vertex) = color.toByte
+    next(vertex) = vertex
+    parent(vertex) = vertex
+    liberties(vertex) = countPliberties(vertex)
+    stones(vertex) = 1
     totalStones(color) += 1
 
-    addNeighbor(i, color)
+    addNeighbor(vertex, color)
 
     for (k <- 0 until 4) {
-      val ai = i + directions(k)
+      val ai = vertex + directions(k)
 
       if (square(ai) <= WHITE) {
         assert(ai >= 0 && ai <= maxSq)
@@ -686,7 +684,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
             prisoners(color) += removeStringFast(ai.toShort)
           }
         } else if (square(ai) == color) {
-          val ip  = parent(i)
+          val ip  = parent(vertex)
           val aip = parent(ai)
 
           if (ip != aip) {
@@ -703,19 +701,19 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     /* move last vertex in list to our position */
     emptyCnt -= 1
     val lastvertex = emptySquare(emptyCnt)
-    emptyIdx(lastvertex) = emptyIdx(i)
-    emptySquare(emptyIdx(i)) = lastvertex
-    assert(liberties(parent(i)) < boardSize * boardSize)
+    emptyIdx(lastvertex) = emptyIdx(vertex)
+    emptySquare(emptyIdx(vertex)) = lastvertex
+    assert(liberties(parent(vertex)) < boardSize * boardSize)
 
     /* check whether we still live (i.e. detect suicide) */
-    if (liberties(parent(i)) == 0) removeStringFast(i)
+    if (liberties(parent(vertex)) == 0) removeStringFast(vertex)
 
     (-1, capture)
   }
 
-  /** check for 4 neighbors of the same color */
-  def isEye(color: Short, i: Short): Boolean = {
-    val ownSurrounded = (neighbors(i) & EYE_MASK(color)) > 0
+  /** Check for 4 neighbors of the same color */
+  def isEye(color: Short, vertex: Short): Boolean = {
+    val ownSurrounded = (neighbors(vertex) & EYE_MASK(color)) > 0
 
     // If not, it can't be an eye.
     // This takes advantage of borders being colored both ways.
@@ -726,10 +724,10 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     // 2 or more diagonals taken; 1 for side groups
     val colorcount = Array.fill[Int](4)(0)
 
-    colorcount(square(i - 1 - boardSize - 2)) += 1
-    colorcount(square(i + 1 - boardSize - 2)) += 1
-    colorcount(square(i - 1 + boardSize + 2)) += 1
-    colorcount(square(i + 1 + boardSize + 2)) += 1
+    colorcount(square(vertex - 1 - boardSize - 2)) += 1
+    colorcount(square(vertex + 1 - boardSize - 2)) += 1
+    colorcount(square(vertex - 1 + boardSize + 2)) += 1
+    colorcount(square(vertex + 1 + boardSize + 2)) += 1
 
     if (colorcount(INVALID) == 0) {
       if (colorcount(otherColor(color)) > 1) return false
@@ -884,8 +882,8 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     0
   }
 
-  def getDir(i: Int): Int = directions(i)
-  def getExtraDir(i: Int): Int = extraDirections(i)
+  def getDir(vertex: Int): Int = directions(vertex)
+  def getExtraDir(vertex: Int): Int = extraDirections(vertex)
 
   def getStoneList: String = {
     var res: String = ""
