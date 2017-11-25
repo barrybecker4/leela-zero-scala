@@ -65,6 +65,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
   private var emptyCnt: Int = _
   private var toMove: Byte = _
   private var maxSq: Short = _
+  private var fbs: FastBoardSerializer = _
   resetBoard(boardSize)
 
   def getBoardSize: Short = boardSize
@@ -147,6 +148,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     critical = Seq()
     emptySquare = Array.ofDim[Short](maxSq)
     emptyIdx = Array.ofDim[Int](maxSq)
+    fbs = new FastBoardSerializer(this)
     initializeAfterReset()
   }
 
@@ -334,11 +336,10 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
   /** Print the board as text */
   def displayBoard(lastMove: Short = -1): Unit = print(toString(lastMove))
   override def toString: String = toString(-1)
-  def toString(lastMove: Short): String = new FastBoardSerializer(this).serialize(lastMove)
+  def toString(lastMove: Short): String = fbs.serialize(lastMove)
   def updateBoardFast(x: Int, y: Int, color: Short): (Int, Boolean) = updateBoardFast(color, getVertex(x, y))
 
   def displayLiberties(lastMove: Short):  Unit = {
-    val fbs = new FastBoardSerializer(this)
     println(fbs.toLibertiesString(lastMove))
     println(fbs.toStringIdString(lastMove))
   }
@@ -408,7 +409,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     (-1, capture)
   }
 
-  /** @return true if surrounded on 4 sides by the specified color and there are enough diagonals to avoid false eye*/
+  /** @return true if surrounded on 4 sides by the specified color and there are enough diagonals to avoid false eye. */
   def isEye(color: Short, vertex: Short): Boolean = {
     val ownSurrounded = (neighbors(vertex) & EYE_MASK(color)) > 0
 
@@ -582,6 +583,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     totalSize
   }
 
+  // move to fbs
   def moveToText(move: Int): String = {
     val (row, column) = getCoord(move)
     var result = ""
@@ -600,6 +602,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     result
   }
 
+  // move to fbs
   def moveToTextSgf(move: Int): String = {
     var (row, column) = getCoord(move)
 
@@ -798,7 +801,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     addNeighbor(i, color)
 
     var captured_sq: Int = 0
-    var captured_stones = 0
+    var capturedStones = 0
 
     for (k <- 0 until 4) {
       val ai = i + directions(k)
@@ -807,19 +810,19 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
       if (countStringLiberties(ai) <= 0) {
         val this_captured = removeStringFast(ai.toShort)
         captured_sq = ai
-        captured_stones += this_captured
+        capturedStones += this_captured
       }
     }
 
     // move last vertex in list to our position
     emptyCnt -= 1
-    val lastvertex = emptySquare(emptyCnt)
-    emptyIdx(lastvertex) = emptyIdx(i)
-    emptySquare(emptyIdx(i)) = lastvertex
-    prisoners(color) += captured_stones
+    val lastVertex = emptySquare(emptyCnt)
+    emptyIdx(lastVertex) = emptyIdx(i)
+    emptySquare(emptyIdx(i)) = lastVertex
+    prisoners(color) += capturedStones
 
     // possibility of ko
-    if (captured_stones == 1) {
+    if (capturedStones == 1) {
        captured_sq
     }
     -1
