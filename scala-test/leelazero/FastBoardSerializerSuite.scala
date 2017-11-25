@@ -131,11 +131,11 @@ class FastBoardSerializerSuite extends FunSuite {
     */
   private def createFilled3x3Board(): FastBoard = {
     val b = new FastBoard(3)
-    b.updateBoardFast(BLACK, b.getVertex(1, 1))
-    b.updateBoardFast(BLACK, b.getVertex(2, 1))
-    b.updateBoardFast(WHITE, b.getVertex(0, 1))
-    b.updateBoardFast(WHITE, b.getVertex(1, 0))
-    b.updateBoardFast(BLACK, b.getVertex(2, 2))
+    b.updateBoardFast(1, 1, BLACK)
+    b.updateBoardFast(2, 1, BLACK)
+    b.updateBoardFast(0, 1, WHITE)
+    b.updateBoardFast(1, 0, WHITE)
+    b.updateBoardFast(2, 2, BLACK)
     b
   }
 }

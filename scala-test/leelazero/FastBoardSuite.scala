@@ -262,6 +262,12 @@ class FastBoardSuite extends FunSuite {
     assertResult(false) { b.isEye(BLACK, b.getVertex(2, 2)) } // white stone on diagonals make it a false eye
   }
 
+  test("getPrisoners when single capture 5x5") {
+    val b = createFilled5x5Board()
+    b.updateBoardFast(3, 4, BLACK)
+    assertResult(0) {b.getPrisoners(WHITE)}
+    assertResult(1) {b.getPrisoners(BLACK)}
+  }
   /**
          a b c d e
        5 . . O O .  5
@@ -273,16 +279,16 @@ class FastBoardSuite extends FunSuite {
     */
   private def create5x5AllWhiteField(): FastBoard = {
     val b = new FastBoard(5)
-    b.updateBoardFast(WHITE, b.getVertex(1, 2))
-    b.updateBoardFast(WHITE, b.getVertex(2, 1))
-    b.updateBoardFast(WHITE, b.getVertex(2, 2))
-    b.updateBoardFast(WHITE, b.getVertex(2, 3))
-    b.updateBoardFast(WHITE, b.getVertex(2, 4))
-    b.updateBoardFast(WHITE, b.getVertex(3, 2))
-    b.updateBoardFast(WHITE, b.getVertex(3, 4))
-    b.updateBoardFast(WHITE, b.getVertex(4, 3))
-    b.updateBoardFast(WHITE, b.getVertex(0, 2))
-    b.updateBoardFast(WHITE, b.getVertex(2, 0))
+    b.updateBoardFast(1, 2, WHITE)
+    b.updateBoardFast(2, 1, WHITE)
+    b.updateBoardFast(2, 2, WHITE)
+    b.updateBoardFast(2, 3, WHITE)
+    b.updateBoardFast(2, 4, WHITE)
+    b.updateBoardFast(3, 2, WHITE)
+    b.updateBoardFast(3, 4, WHITE)
+    b.updateBoardFast(4, 3, WHITE)
+    b.updateBoardFast(0, 2, WHITE)
+    b.updateBoardFast(2, 0, WHITE)
     b
   }
 
@@ -297,17 +303,17 @@ class FastBoardSuite extends FunSuite {
     */
   private def create5x5AllBlackField(): FastBoard = {
     val b = new FastBoard(5)
-    b.updateBoardFast(BLACK, b.getVertex(1, 2))
-    b.updateBoardFast(BLACK, b.getVertex(2, 1))
-    b.updateBoardFast(BLACK, b.getVertex(0, 4))
-    b.updateBoardFast(BLACK, b.getVertex(2, 3))
-    b.updateBoardFast(BLACK, b.getVertex(2, 4))
-    b.updateBoardFast(BLACK, b.getVertex(3, 2))
-    b.updateBoardFast(BLACK, b.getVertex(3, 4))
-    b.updateBoardFast(BLACK, b.getVertex(4, 3))
-    b.updateBoardFast(BLACK, b.getVertex(0, 2))
-    b.updateBoardFast(WHITE, b.getVertex(1, 1))
-    b.updateBoardFast(WHITE, b.getVertex(3, 1))
+    b.updateBoardFast(1, 2, BLACK)
+    b.updateBoardFast(2, 1, BLACK)
+    b.updateBoardFast(0, 4, BLACK)
+    b.updateBoardFast(2, 3, BLACK)
+    b.updateBoardFast(2, 4, BLACK)
+    b.updateBoardFast(3, 2, BLACK)
+    b.updateBoardFast(3, 4, BLACK)
+    b.updateBoardFast(4, 3, BLACK)
+    b.updateBoardFast(0, 2, BLACK)
+    b.updateBoardFast(1, 1, WHITE)
+    b.updateBoardFast(3, 1, WHITE)
     b
   }
 
@@ -322,19 +328,19 @@ class FastBoardSuite extends FunSuite {
     */
   private def createSemiFilled5x5Board(): FastBoard = {
     val b = new FastBoard(5)
-    b.updateBoardFast(BLACK, b.getVertex(1, 1))
-    b.updateBoardFast(BLACK, b.getVertex(2, 1))
-    b.updateBoardFast(WHITE, b.getVertex(3, 1))
-    b.updateBoardFast(WHITE, b.getVertex(2, 2))
-    b.updateBoardFast(BLACK, b.getVertex(3, 2))
-    b.updateBoardFast(BLACK, b.getVertex(0, 3))
-    b.updateBoardFast(WHITE, b.getVertex(2, 3))
-    b.updateBoardFast(WHITE, b.getVertex(2, 4))
+    b.updateBoardFast(1, 1, BLACK)
+    b.updateBoardFast(2, 1, BLACK)
+    b.updateBoardFast(3, 1, WHITE)
+    b.updateBoardFast(2, 2, WHITE)
+    b.updateBoardFast(3, 2, BLACK)
+    b.updateBoardFast(0, 3, BLACK)
+    b.updateBoardFast(2, 3, WHITE)
+    b.updateBoardFast(2, 4, WHITE)
     b
   }
 
   /**
-  a b c d e
+        a b c d e
       5 . . O . O  5
       4 X . O O X  4
       3 X O O X .  3
@@ -344,22 +350,22 @@ class FastBoardSuite extends FunSuite {
     */
   private def createFilled5x5Board(): FastBoard = {
     val b = new FastBoard(5)
-    b.updateBoardFast(BLACK, b.getVertex(1, 1))
-    b.updateBoardFast(BLACK, b.getVertex(2, 1))
-    b.updateBoardFast(WHITE, b.getVertex(3, 1))
-    b.updateBoardFast(WHITE, b.getVertex(2, 2))
-    b.updateBoardFast(BLACK, b.getVertex(3, 2))
-    b.updateBoardFast(BLACK, b.getVertex(0, 3))
-    b.updateBoardFast(WHITE, b.getVertex(2, 3))
-    b.updateBoardFast(WHITE, b.getVertex(2, 4))
-    b.updateBoardFast(WHITE, b.getVertex(3, 3))
-    b.updateBoardFast(WHITE, b.getVertex(4, 4))
-    b.updateBoardFast(BLACK, b.getVertex(4, 3))
-    b.updateBoardFast(WHITE, b.getVertex(1, 2))
-    b.updateBoardFast(BLACK, b.getVertex(0, 2))
-    b.updateBoardFast(WHITE, b.getVertex(0, 0))
-    b.updateBoardFast(BLACK, b.getVertex(1, 0))
-    b.updateBoardFast(BLACK, b.getVertex(3, 0))
+    b.updateBoardFast(1, 1, BLACK)
+    b.updateBoardFast(2, 1, BLACK)
+    b.updateBoardFast(3, 1, WHITE)
+    b.updateBoardFast(2, 2, WHITE)
+    b.updateBoardFast(3, 2, BLACK)
+    b.updateBoardFast(0, 3, BLACK)
+    b.updateBoardFast(2, 3, WHITE)
+    b.updateBoardFast(2, 4, WHITE)
+    b.updateBoardFast(3, 3, WHITE)
+    b.updateBoardFast(4, 4, WHITE)
+    b.updateBoardFast(4, 3, BLACK)
+    b.updateBoardFast(1, 2, WHITE)
+    b.updateBoardFast(0, 2, BLACK)
+    b.updateBoardFast(0, 0, WHITE)
+    b.updateBoardFast(1, 0, BLACK)
+    b.updateBoardFast(3, 0, BLACK)
     b
   }
 }

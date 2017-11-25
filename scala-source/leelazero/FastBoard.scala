@@ -335,13 +335,13 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
   def displayBoard(lastMove: Short = -1): Unit = print(toString(lastMove))
   override def toString: String = toString(-1)
   def toString(lastMove: Short): String = new FastBoardSerializer(this).serialize(lastMove)
+  def updateBoardFast(x: Int, y: Int, color: Short): (Int, Boolean) = updateBoardFast(color, getVertex(x, y))
 
   def displayLiberties(lastMove: Short):  Unit = {
     val fbs = new FastBoardSerializer(this)
     println(fbs.toLibertiesString(lastMove))
     println(fbs.toStringIdString(lastMove))
   }
-
 
   /**
     * Returns ko square or suicide tag. Does not update side to move.
