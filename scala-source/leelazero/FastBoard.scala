@@ -178,14 +178,14 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
       parent(i) = maxSq
     }
 
-    initializeNeighbours()
+    initializeNeighbors()
 
     parent(maxSq ) = maxSq
     liberties(maxSq) = MAX_LIBS   /* subtract from this */
     next(maxSq) = maxSq
   }
 
-  private def initializeNeighbours(): Unit = {
+  private def initializeNeighbors(): Unit = {
     for (i <- 0 until boardSize) {
       for (j <- 0 until boardSize) {
         val vertex: Short = getVertex(i, j)
@@ -555,7 +555,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     print("\n\n")
   }
 
-  def starpoint(size: Short, point: Int): Boolean = {
+  def starPoint(size: Short, point: Int): Boolean = {
     val stars = Array.ofDim[Int](3)
     val points = Array.ofDim[Int](2)
     var hits = 0
@@ -582,9 +582,9 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     hits >= 2
   }
 
-  def starpoint(size: Short, x: Int, y: Int): Boolean = starpoint(size, y * size + x)
+  def starpoint(size: Short, x: Int, y: Int): Boolean = starPoint(size, y * size + x)
 
-  def mergeStrings(ip: Short, aip: Short): Unit = {
+  private def mergeStrings(ip: Short, aip: Short): Unit = {
     assert(ip != maxSq && aip != maxSq)
     stones(ip) += stones(aip) // merge stones
     var newpos = aip              // loop over stones, update parents
@@ -622,7 +622,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
   }
 
   /** @return the captured square, if any. Else -1 */
-  def updateBoardEye(color: Short, i: Short): Short = {
+  private def updateBoardEye(color: Short, i: Short): Short = {
     square(i)  = color.toByte
     next(i) = i
     parent(i) = i
