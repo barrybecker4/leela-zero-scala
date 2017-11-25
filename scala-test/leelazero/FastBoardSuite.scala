@@ -194,6 +194,7 @@ class FastBoardSuite extends FunSuite {
     val vertices = Array(
       b.getVertex(1, 1), b.getVertex(2, 1), b.getVertex(3, 1), b.getVertex(4, 1), b.getVertex(2, 2), b.getVertex(3, 2), b.getVertex(0, 3)
     )
+    b.displayLiberties(-1)
     assertResult("3, 1, 2, 2, 1, 2, 3") {  // correct!
       vertices.map(v => b.countNeighbors(EMPTY, v)).mkString(", ")
     }

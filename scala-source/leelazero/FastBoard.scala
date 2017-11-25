@@ -51,16 +51,16 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
 
   private var square: Array[Byte] = _    // Board contents
   private var next: Array[Short] = _     // next stone in string
-  private var parent: Array[Short] = _   // parent node of string
-  private var liberties: Array[Int] = _     // liberties per string parent
-  private var stones: Array[Int] = _   // stones per string parent
+  private var parentString: Array[Short] = _  // parent string of vertex
+  private var stringLiberties: Array[Int] = _  // liberties per string parent
+  private var stonesInString: Array[Int] = _   // stones per string parent
   private var neighbors: Array[Int] = _  // counts of neighboring stones
   private var directions: Array[Int] = _      // movement in 4 directions
   private var extraDirections: Array[Int] = _ // movement in 8 directions
   private var prisoners: Array[Int] = _     // prisoners per color
   private var totalStones: Array[Int] = _   // total stones per color
   private var critical: Seq[Short] = Seq()  // queue of critical points  (use dropRight to pop)
-  private var emptySquare: Array[Short] = _      // empty squares
+  private var emptySquare: Array[Short] = _ // empty squares
   private var emptyIdx: Array[Int] = _  // indices of empty squares
   private var emptyCnt: Int = _
   private var toMove: Byte = _
@@ -136,9 +136,9 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
 
     square = Array.ofDim[Byte](maxSq)
     next = Array.ofDim[Short](maxSq + 1)
-    parent = Array.ofDim[Short](maxSq + 1)
-    liberties = Array.ofDim[Int](maxSq + 1)
-    stones = Array.ofDim[Int](maxSq + 1)
+    parentString = Array.ofDim[Short](maxSq + 1)
+    stringLiberties = Array.ofDim[Int](maxSq + 1)
+    stonesInString = Array.ofDim[Int](maxSq + 1)
     neighbors = Array.ofDim[Int](maxSq )
     directions = Array.ofDim[Int](4)
     extraDirections = Array.ofDim[Int](8)
@@ -175,13 +175,13 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     for (i <- 0 until maxSq) {
       square(i) = INVALID
       neighbors(i) = 0
-      parent(i) = maxSq
+      parentString(i) = maxSq
     }
 
     initializeNeighbors()
 
-    parent(maxSq ) = maxSq
-    liberties(maxSq) = MAX_LIBS   /* subtract from this */
+    parentString(maxSq ) = maxSq
+    stringLiberties(maxSq) = MAX_LIBS   /* subtract from this */
     next(maxSq) = maxSq
   }
 
@@ -216,7 +216,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     for (k <- 0 until 4) {
       val ai = vertex + directions(k)
 
-      val libs = liberties(parent(ai))
+      val libs = countRealLiberties(ai)
       if (getSquare(ai) == color) {
         if (libs > 1) {
           return false // connecting to live group = never suicide
@@ -235,7 +235,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
 
     for (k <- 0 until 4) {
       val ai = vertex + directions(k)
-      val libs = liberties(parent(ai))
+      val libs = countRealLiberties(ai)
 
       if (libs == 0 && getSquare(ai) != color) {
         opps_live = false
@@ -261,17 +261,18 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
   }
 
   /**
-    * Actual liberties of the group. Probably implemented using union-find (need to verify).
+    * Actual liberties of the string the specified vertex position belongs to.
+    * Possibly implemented using union-find (need to verify).
     * The difference is speed, pseudo liberties have O(1) adding and removal,
     * and real liberties have the inverse Ackermann function for that,
     * but in practice there is a significant speed difference.
     * @return number of real liberties
     */
-  def countRealLiberties(vertex: Int): Int = liberties(parent(vertex))
+  def countRealLiberties(vertex: Int): Int = stringLiberties(parentString(vertex))
 
   /**
     * @return Count of neighbors of color c at vertex v.
-    *       The border of the board has fake neighours of both colors.
+    *   The border of the board has fake neighbors of both colors.
     */
   def countNeighbors(c: Short, vertex: Short): Short = {
     assert(c == WHITE || c == BLACK || c == EMPTY)
@@ -291,14 +292,14 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
       var found = false
       var i = 0
       while (i < nbrParentCount && !found) {
-        if (nbrParents(i) == parent(ai)) {
+        if (nbrParents(i) == parentString(ai)) {
           found = true
         }
         i += 1
       }
       if (!found) {
-        liberties(parent(ai)) -= 1
-        nbrParents(nbrParentCount) = parent(ai)
+        stringLiberties(parentString(ai)) -= 1
+        nbrParents(nbrParentCount) = parentString(ai)
         nbrParentCount += 1
       }
     }
@@ -317,14 +318,14 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
       var found = false
       var i = 0
       while (i < nbrParentCount && !found) {
-        if (nbrParents(i) == parent(ai)) {
+        if (nbrParents(i) == parentString(ai)) {
           found = true
         }
         i += 1
       }
       if (!found) {
-        liberties(parent(ai)) += 1
-        nbrParents(nbrParentCount) = parent(ai)
+        stringLiberties(parentString(ai)) += 1
+        nbrParents(nbrParentCount) = parentString(ai)
         nbrParentCount += 1
       }
     }
@@ -340,10 +341,10 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
 
     if (eyePlay > 0) return false
 
-    !((liberties(parent(vertex - 1)) <= 1) ||
-      (liberties(parent(vertex + 1)) <= 1) ||
-      (liberties(parent(vertex + boardSize + 2)) <= 1) ||
-      (liberties(parent(vertex - boardSize - 2)) <= 1))
+    !((countRealLiberties(vertex - 1) <= 1) ||
+      (countRealLiberties(vertex + 1) <= 1) ||
+      (countRealLiberties(vertex + boardSize + 2) <= 1) ||
+      (countRealLiberties(vertex - boardSize - 2) <= 1))
   }
 
   /** @return the number of stones in the string that was removed */
@@ -356,7 +357,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     do {
       assert(square(pos) == color)
       square(pos) = EMPTY
-      parent(pos) = maxSq
+      parentString(pos) = maxSq
       totalStones(color) -= 1
 
       removeNeighbor(pos, color)
@@ -479,82 +480,77 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     result + "\n"
   }
 
-  private def createColumnLabels(): String = {
+  def displayLiberties(lastMove: Short):  Unit = {
+    println(toLibertiesString(lastMove))
+    print("\n")
+    println(toStringIdString(lastMove))
+    print("\n")
+  }
+
+  /** @return a string that displays the board with the number of string liberties at every played position */
+  private def toLibertiesString(lastMove: Short): String = {
+    var res = createColumnLabels()
+    for (j <- boardSize - 1 to 0 by -1) {
+      res += f"${j + 1}%2d"
+      if (lastMove == getVertex(0,j)) res += "("
+      else res += " "
+      for (i <- 0 until boardSize) {
+        if (getSquare(i,j) == WHITE) {
+          var libs = countRealLiberties(getVertex(i, j))
+          if (libs > 9) { libs = 9 }
+          res += f"$libs%1d"
+        } else if (getSquare(i, j) == BLACK) {
+          var libs = countRealLiberties(getVertex(i, j))
+          if (libs > 9) { libs = 9; }
+          res += f"$libs%1d"
+        } else if (starpoint(boardSize, i, j)) {
+          res += "+"
+        } else res += "."
+
+        if (lastMove == getVertex(i, j)) print(")")
+        else if (i != boardSize-1 && lastMove == getVertex(i, j) + 1)
+          res += "("
+        else res += " "
+      }
+      res += f"${j + 1}%2d\n"
+    }
+    res
+  }
+
+  /** @return a string that displays the board with the id of the string at each string point */
+  private def toStringIdString(lastMove: Short): String = {
+    var res = createColumnLabels("  ")
+    for (j <- boardSize - 1 to 0 by -1) {
+      res += f"${j + 1}%2d"
+      if (lastMove == getVertex(0, j)) res += "("
+      else res += " "
+      for (i <- 0 until boardSize) {
+        val color = getSquare(i, j)
+        if (color == WHITE || color == BLACK) {
+          val stringId = parentString(getVertex(i, j))
+          res += f"$stringId%2d"
+        } else if (starpoint(boardSize, i, j)) {
+          res += "+ "
+        } else res += ". "
+        if (lastMove == getVertex(i, j)) res += ")"
+        else if (i != boardSize-1 && lastMove == getVertex(i, j) + 1) res += "("
+        else res += " "
+      }
+      res += f"${j + 1}%2d\n"
+    }
+    res
+  }
+
+  private def createColumnLabels(padding: String = " "): String = {
     var result = "   "
     for (i <- 0 until boardSize) {
       if (i < 25) {
-        result += (if ('a' + i < 'i') 'a' + i else 'a' + i + 1).toChar + " "
+        result += (if ('a' + i < 'i') 'a' + i else 'a' + i + 1).toChar + padding
       } else {
-        result += (if ('A' + (i - 25) < 'I') 'A' + (i - 25) else 'A' + (i - 25) + 1).toChar + " "
+        result += (if ('A' + (i - 25) < 'I') 'A' + (i - 25) else 'A' + (i - 25) + 1).toChar + padding
       }
     }
     result.substring(0, result.length - 1) + "\n"
-  }
-
-  def displayLiberties(lastMove: Short):  Unit = {
-    print("   ")
-    for (i <- 0 until boardSize) {
-      print(if ('a' + i < 'i') 'a' + i else 'a' + i + 1)
-    }
-    printf("\n")
-    for (j <- boardSize - 1 to 0 by -1) {
-      printf("%2d", j + 1)
-      if (lastMove == getVertex(0,j))
-        print("(")
-      else
-        printf(" ")
-      for (i <- 0 until boardSize) {
-        if (getSquare(i,j) == WHITE) {
-          var libs = liberties(parent(getVertex(i, j)))
-          if (libs > 9) { libs = 9 }
-          printf("%1d", libs)
-        } else if (getSquare(i, j) == BLACK) {
-          var libs = liberties(parent(getVertex(i, j)))
-          if (libs > 9) { libs = 9; }
-          printf("%1d", libs)
-        } else if (starpoint(boardSize, i, j)) {
-          printf("+")
-        } else {
-          printf(".")
-        }
-        if (lastMove == getVertex(i, j)) print(")")
-        else if (i != boardSize-1 && lastMove == getVertex(i, j) + 1)
-          print("(")
-        else printf(" ")
-      }
-      printf("%2d\n", j + 1)
-    }
-    print("\n\n")
-    printf("   ")
-    for (i <- 0 until boardSize) {
-      print(if ('a' + i < 'i')  'a' + i else 'a' + i + 1)
-    }
-    print("\n")
-    for (j <- boardSize - 1 to 0 by -1) {
-      printf("%2d", j + 1)
-      if (lastMove == getVertex(0, j))
-        printf("(")
-      else
-        printf(" ")
-      for (i <- 0 until boardSize) {
-        if (getSquare(i, j) == WHITE) {
-          val id = parent(getVertex(i, j))
-          printf("%2d", id)
-        } else if (getSquare(i,j) == BLACK)  {
-          val id = parent(getVertex(i,j))
-          printf("%2d", id)
-        } else if (starpoint(boardSize, i, j)) {
-          print("+ ")
-        } else {
-          print(". ")
-        }
-        if (lastMove == getVertex(i, j)) printf(")")
-        else if (i != boardSize-1 && lastMove == getVertex(i, j)+1) print("(")
-        else print(" ")
-      }
-      printf("%2d\n", j + 1)
-    }
-    print("\n\n")
   }
 
   def starPoint(size: Short, point: Int): Boolean = {
@@ -588,7 +584,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
 
   private def mergeStrings(ip: Short, aip: Short): Unit = {
     assert(ip != maxSq && aip != maxSq)
-    stones(ip) += stones(aip) // merge stones
+    stonesInString(ip) += stonesInString(aip) // merge stones
     var newpos = aip              // loop over stones, update parents
 
     do {
@@ -603,17 +599,17 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
           while (kk < 4 && !found) {
             val aai = ai + directions(kk)
             // Friendly string shouldn't be ip. ip can also be an aip that has been marked.
-            if (parent(aai) == ip) {
+            if (parentString(aai) == ip) {
               found = true
             }
             kk += 1
           }
 
-          if (!found) liberties(ip) += 1
+          if (!found) stringLiberties(ip) += 1
         }
       }
 
-      parent(newpos) = ip
+      parentString(newpos) = ip
       newpos = next(newpos)
     } while (newpos != aip)
 
@@ -627,9 +623,9 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
   private def updateBoardEye(color: Short, i: Short): Short = {
     square(i)  = color.toByte
     next(i) = i
-    parent(i) = i
-    liberties(i) = 0
-    stones(i)  = 1
+    parentString(i) = i
+    stringLiberties(i) = 0
+    stonesInString(i)  = 1
     totalStones(color) += 1
 
     addNeighbor(i, color)
@@ -641,7 +637,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
       val ai = i + directions(k)
       assert(ai >= 0 && ai <= maxSq)
 
-      if (liberties(parent(ai)) <= 0) {
+      if (countRealLiberties(ai) <= 0) {
         val this_captured = removeStringFast(ai.toShort)
         captured_sq = ai
         captured_stones += this_captured
@@ -682,9 +678,9 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
 
     square(vertex) = color.toByte
     next(vertex) = vertex
-    parent(vertex) = vertex
-    liberties(vertex) = countPointLiberties(vertex)
-    stones(vertex) = 1
+    parentString(vertex) = vertex
+    stringLiberties(vertex) = countPointLiberties(vertex)
+    stonesInString(vertex) = 1
     totalStones(color) += 1
 
     addNeighbor(vertex, color)
@@ -696,16 +692,16 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
         assert(ai >= 0 && ai <= maxSq)
 
         if (square(ai) == otherColor(color)) {
-          if (liberties(parent(ai)) <= 0) {
+          if (countRealLiberties(ai) <= 0) {
             capture = true
             prisoners(color) += removeStringFast(ai.toShort)
           }
         } else if (square(ai) == color) {
-          val ip  = parent(vertex)
-          val aip = parent(ai)
+          val ip  = parentString(vertex)
+          val aip = parentString(ai)
 
           if (ip != aip) {
-            if (stones(ip) >= stones(aip)) {
+            if (stonesInString(ip) >= stonesInString(aip)) {
               mergeStrings(ip, aip)
             } else {
               mergeStrings(aip, ip)
@@ -720,11 +716,10 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     val lastvertex = emptySquare(emptyCnt)
     emptyIdx(lastvertex) = emptyIdx(vertex)
     emptySquare(emptyIdx(vertex)) = lastvertex
-    assert(liberties(parent(vertex)) < boardSize * boardSize)
+    assert(countRealLiberties(vertex) < boardSize * boardSize)
 
     /* check whether we still live (i.e. detect suicide) */
-    if (liberties(parent(vertex)) == 0) removeStringFast(vertex)
-
+    if (countRealLiberties(vertex) == 0) removeStringFast(vertex)
     (-1, capture)
   }
 
@@ -833,12 +828,12 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
 
   def getGroupId(vertex: Int): Int = {
     assert(square(vertex) == WHITE || square(vertex) == BLACK)
-    assert(parent(vertex) == parent(parent(vertex)))
-    parent(vertex)
+    assert(parentString(vertex) == parentString(parentString(vertex)))
+    parentString(vertex)
   }
 
   def getStringStones(vertex: Int): Seq[Int] = {
-    val start = parent(vertex)
+    val start = parentString(vertex)
     var res: Seq[Int] = Seq() //Array.ofDim(stones(start))
     var newpos = start
 
@@ -852,7 +847,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
 
   def getString(vertex: Int): String = {
     var result: String = ""
-    val start = parent(vertex)
+    val start = parentString(vertex)
     var newpos = start
 
     do {
@@ -864,9 +859,9 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
   }
 
   def fastInAtari(vertex: Int): Boolean = {
-    assert((square(vertex) < EMPTY) || (liberties(parent(vertex)) > maxSq))
-    val theParent = parent(vertex)
-    liberties(theParent) == 1
+    assert((square(vertex) < EMPTY) || (countRealLiberties(vertex) > maxSq))
+    val theParent = parentString(vertex)
+    stringLiberties(theParent) == 1
   }
 
   /**
@@ -876,11 +871,11 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
   def inAtari(vertex: Short): Int = {
     assert(square(vertex) < EMPTY)
 
-    if (liberties(parent(vertex)) > 1) {
+    if (countRealLiberties(vertex) > 1) {
       return 0
     }
 
-    assert(liberties(parent(vertex)) == 1)
+    assert(countRealLiberties(vertex) == 1)
     var pos = vertex
 
     do {
@@ -920,7 +915,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
   def stringSize(vertex: Int): Int = {
     assert(vertex > 0 && vertex < maxSq)
     assert(square(vertex) == WHITE || square(vertex) == BLACK)
-    stones(parent(vertex))
+    stonesInString(parentString(vertex))
   }
 
   def mergedStringSize(color: Short, vertex: Int): Int = {
@@ -932,7 +927,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
       val ai = vertex + directions(k)
 
       if (getSquare(ai) == color) {
-        val theParent = parent(ai)
+        val theParent = parentString(ai)
 
         var found = false
         var i = 0
