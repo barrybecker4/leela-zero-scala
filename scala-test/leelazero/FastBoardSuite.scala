@@ -6,7 +6,6 @@ import TestUtil._
 
 class FastBoardSuite extends FunSuite {
 
-
   test("Create an empty 3x3 board") {
     val b = new FastBoard(3)
     assertResult(clean("""
@@ -183,11 +182,20 @@ class FastBoardSuite extends FunSuite {
   test("Count real liberties on 5x5") {
     val b = createFilled5x5Board()
     val vertices = Array(
-      b.getVertex(1, 1), b.getVertex(2, 1), b.getVertex(3, 1), b.getVertex(4, 1),
-      b.getVertex(2, 2), b.getVertex(3, 2), b.getVertex(0, 3)
+      b.getVertex(1, 1), b.getVertex(2, 1), b.getVertex(3, 1), b.getVertex(4, 1), b.getVertex(2, 2), b.getVertex(3, 2), b.getVertex(0, 3)
     )
-    assertResult("16377, 2, 2, 16377, 5, 2, 3") {   // some of these seem wrong, but maybe I don't understand
+    assertResult("4, 4, 2, 16376, 5, 2, 3") {   // 16376 used for black spaces?
       vertices.map(v => b.countRealLiberties(v)).mkString(", ")
+    }
+  }
+
+  test("Count empty neighbors on 5x5") {
+    val b = createFilled5x5Board()
+    val vertices = Array(
+      b.getVertex(1, 1), b.getVertex(2, 1), b.getVertex(3, 1), b.getVertex(4, 1), b.getVertex(2, 2), b.getVertex(3, 2), b.getVertex(0, 3)
+    )
+    assertResult("3, 1, 2, 2, 1, 2, 3") {  // correct!
+      vertices.map(v => b.countNeighbors(EMPTY, v)).mkString(", ")
     }
   }
 
@@ -206,8 +214,19 @@ class FastBoardSuite extends FunSuite {
     b
   }
 
+  /**
+    *   a b c d e
+      5 . . O . .  5
+      4 X . O . .  4
+      3 . . O X .  3
+      2 . X X O .  2
+      1 . . . . .  1
+        a b c d e
+    * @return
+    */
   private def createFilled5x5Board(): FastBoard = {
     val b = new FastBoard(5)
+    b.updateBoardFast(BLACK, b.getVertex(1, 1))
     b.updateBoardFast(BLACK, b.getVertex(2, 1))
     b.updateBoardFast(WHITE, b.getVertex(3, 1))
     b.updateBoardFast(WHITE, b.getVertex(2, 2))

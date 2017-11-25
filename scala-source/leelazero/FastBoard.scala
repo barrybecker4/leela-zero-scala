@@ -207,8 +207,9 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
   }
   private def initializeCenterPoint(vertex: Short): Unit = { neighbors(vertex) += 2 << (NBR_SHIFT * EMPTY) }
 
+  /** @return true if placing the specified colored stone at the specified position would be suicide */
   def isSuicide(vertex: Short, color: Short): Boolean = {
-    if (countPseudoLiberties(vertex) > 0) return false
+    if (countPointLiberties(vertex) > 0) return false
 
     var connecting = false
 
@@ -255,7 +256,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     * However, the test for 0 liberties remains correct, and there is also a simple "atari" check.
     * @return number of pseudo liberties
     */
-  private def countPseudoLiberties(vertex: Short): Short = {
+  private def countPointLiberties(vertex: Short): Short = {
     countNeighbors(EMPTY, vertex)
   }
 
@@ -682,7 +683,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     square(vertex) = color.toByte
     next(vertex) = vertex
     parent(vertex) = vertex
-    liberties(vertex) = countPseudoLiberties(vertex)
+    liberties(vertex) = countPointLiberties(vertex)
     stones(vertex) = 1
     totalStones(color) += 1
 
@@ -883,7 +884,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     var pos = vertex
 
     do {
-      if (countPseudoLiberties(pos) > 0) {
+      if (countPointLiberties(pos) > 0) {
         for (k <- 0 until 4) {
           val ai = pos + directions(k)
           if (square(ai) == EMPTY) {
