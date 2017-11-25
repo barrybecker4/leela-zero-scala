@@ -305,12 +305,14 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     score
   }
 
+  /** @return estimate of the Monte-Carlo play-out score */
   def estimateMcScore(komi: Float): Int = {
-    val wsc = totalStones(BLACK)
-    val bsc = totalStones(WHITE)
+    val bsc = totalStones(BLACK)
+    val wsc = totalStones(WHITE)
     bsc - wsc - komi.toShort + 1
   }
 
+  /** @return final Monte-Carlo play-out score */
   def finalMcScore(komi: Float): Float = {
     val maxempty = emptyCnt
     var bsc = totalStones(BLACK)
@@ -320,28 +322,308 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
       val i = emptySquare(v)
       assert(square(i) == EMPTY)
 
-      val allblack = ((neighbors(i) >> (NBR_SHIFT * BLACK)) & 7) == 4
-      val allwhite = ((neighbors(i) >> (NBR_SHIFT * WHITE)) & 7) == 4
+      val allBlack = ((neighbors(i) >> (NBR_SHIFT * BLACK)) & 7) == 4
+      val allWhite = ((neighbors(i) >> (NBR_SHIFT * WHITE)) & 7) == 4
 
-      if (allwhite) { wsc += 1 }
-      else if (allblack) { bsc += 1 }
+      if (allWhite) { wsc += 1 }
+      else if (allBlack) { bsc += 1 }
     }
     bsc - wsc + komi
   }
 
   /** Print the board as text */
-  def displayBoard(lastMove: Short = -1): Unit = {
-    print(toString(lastMove))
-  }
-
+  def displayBoard(lastMove: Short = -1): Unit = print(toString(lastMove))
   override def toString: String = toString(-1)
   def toString(lastMove: Short): String = new FastBoardSerializer(this).serialize(lastMove)
-
 
   def displayLiberties(lastMove: Short):  Unit = {
     val fbs = new FastBoardSerializer(this)
     println(fbs.toLibertiesString(lastMove))
     println(fbs.toStringIdString(lastMove))
+  }
+
+
+  /**
+    * Returns ko square or suicide tag. Does not update side to move.
+    * @param color player who placed a stone
+    * @param vertex position
+    * @return (ko square, capture) If no capture then return (-1, false)
+    */
+  def updateBoardFast(color: Short, vertex: Short): (Int, Boolean) = {
+    assert(square(vertex) == EMPTY)
+    assert(color == WHITE || color == BLACK)
+
+    val eyePlay: Boolean = (neighbors(vertex) & EYE_MASK(otherColor(color))) > 0   // did we play into an opponent eye?
+
+    // because we check for single stone suicide, we know it's a capture, and it might be a ko capture
+    var capture = false
+    if (eyePlay) {
+      return (updateBoardEye(color, vertex), true)
+    }
+
+    square(vertex) = color.toByte
+    next(vertex) = vertex
+    parentString(vertex) = vertex
+    stringLiberties(vertex) = countPointLiberties(vertex)
+    stonesInString(vertex) = 1
+    totalStones(color) += 1
+
+    addNeighbor(vertex, color)
+
+    for (k <- 0 until 4) {
+      val ai = vertex + directions(k)
+
+      if (square(ai) <= WHITE) {
+        assert(ai >= 0 && ai <= maxSq)
+
+        if (square(ai) == otherColor(color)) {
+          if (countStringLiberties(ai) <= 0) {
+            capture = true
+            prisoners(color) += removeStringFast(ai.toShort)
+          }
+        } else if (square(ai) == color) {
+          val ip  = parentString(vertex)
+          val aip = parentString(ai)
+
+          if (ip != aip) {
+            if (stonesInString(ip) >= stonesInString(aip)) {
+              mergeStrings(ip, aip)
+            } else {
+              mergeStrings(aip, ip)
+            }
+          }
+        }
+      }
+    }
+
+    /* move last vertex in list to our position */
+    emptyCnt -= 1
+    val lastvertex = emptySquare(emptyCnt)
+    emptyIdx(lastvertex) = emptyIdx(vertex)
+    emptySquare(emptyIdx(vertex)) = lastvertex
+    assert(countStringLiberties(vertex) < boardSize * boardSize)
+
+    /* check whether we still live (i.e. detect suicide) */
+    if (countStringLiberties(vertex) == 0) removeStringFast(vertex)
+    (-1, capture)
+  }
+
+  /** Check for 4 neighbors of the same color */
+  def isEye(color: Short, vertex: Short): Boolean = {
+    val ownSurrounded = (neighbors(vertex) & EYE_MASK(color)) > 0
+
+    // If not, it can't be an eye.
+    // This takes advantage of borders being colored both ways.
+    if (!ownSurrounded) {
+      return false
+    }
+
+    // 2 or more diagonals taken; 1 for side groups
+    val colorcount = Array.fill[Int](4)(0)
+
+    colorcount(square(vertex - 1 - boardSize - 2)) += 1
+    colorcount(square(vertex + 1 - boardSize - 2)) += 1
+    colorcount(square(vertex - 1 + boardSize + 2)) += 1
+    colorcount(square(vertex + 1 + boardSize + 2)) += 1
+
+    if (colorcount(INVALID) == 0) {
+      if (colorcount(otherColor(color)) > 1) return false
+    }
+    else if (colorcount(otherColor(color)) > 0) return false
+    true
+  }
+
+  def textToMove(move: String): Int = {
+    if (move.length == 0 || move == "pass") {
+      return PASS
+    }
+    if (move == "resign") {
+      return RESIGN
+    }
+
+    val c1 = move(0).toLower
+    var x: Int = c1 - 'a'
+    // There is no i in ...
+    assert(x != 8)
+    if (x > 8) x -= 1
+    val remainder = move.substring(1)
+    val y: Int = remainder.toInt - 1
+    getVertex(x, y)
+  }
+
+  def getPrisoners(side: Short): Int = {
+    assert(side == WHITE || side == BLACK)
+    prisoners(side)
+  }
+
+  def blackToMove(): Boolean = toMove == BLACK
+  def getToMove: Byte = toMove
+  def setToMove(tomove: Byte): Unit = { toMove = tomove }
+  def getParentString(vertex: Short): Short = parentString(vertex)
+
+  def getGroupId(vertex: Int): Int = {
+    assert(square(vertex) == WHITE || square(vertex) == BLACK)
+    assert(parentString(vertex) == parentString(parentString(vertex)))
+    parentString(vertex)
+  }
+
+  def getStringStones(vertex: Int): Seq[Int] = {
+    val start = parentString(vertex)
+    var res: Seq[Int] = Seq() //Array.ofDim(stones(start))
+    var newpos = start
+
+    do {
+      assert(square(newpos) == square(vertex))
+      res :+= newpos.toInt
+      newpos = next(newpos)
+    } while (newpos != start)
+    res
+  }
+
+  def getString(vertex: Int): String = {
+    var result: String = ""
+    val start = parentString(vertex)
+    var newpos = start
+
+    do {
+      result += moveToText(newpos) + " "
+      newpos = next(newpos)
+    } while (newpos != start)
+
+    result.substring(0, result.length - 1) // remove last space
+  }
+
+  def fastInAtari(vertex: Int): Boolean = {
+    assert((square(vertex) < EMPTY) || (countStringLiberties(vertex) > maxSq))
+    val theParent = parentString(vertex)
+    stringLiberties(theParent) == 1
+  }
+
+  /**
+    * @param vertex the vertex to check if in atari
+    * @return 0 if not in atari, position of single liberty if it is
+    */
+  def inAtari(vertex: Short): Int = {
+    assert(square(vertex) < EMPTY)
+
+    if (countStringLiberties(vertex) > 1) {
+      return 0
+    }
+
+    assert(countStringLiberties(vertex) == 1)
+    var pos = vertex
+
+    do {
+      if (countPointLiberties(pos) > 0) {
+        for (k <- 0 until 4) {
+          val ai = pos + directions(k)
+          if (square(ai) == EMPTY) {
+            return ai
+          }
+        }
+      }
+
+      pos = next(pos)
+    } while (pos != vertex)
+    assert(false)  // should be unreachable
+    0
+  }
+
+  def getDir(vertex: Int): Int = directions(vertex)
+  def getExtraDir(vertex: Int): Int = extraDirections(vertex)
+
+  def getStoneList: String = {
+    var res: String = ""
+
+    for (i <- 0 until boardSize) {
+      for (j <- 0 until boardSize) {
+        val vertex: Int = getVertex(i, j)
+
+        if (getSquare(vertex) != EMPTY) {
+          res += moveToText(vertex) + " "
+        }
+      }
+    }
+    res.substring(0, res.length - 1) // remove final space
+  }
+
+  def stringSize(vertex: Int): Int = {
+    assert(vertex > 0 && vertex < maxSq)
+    assert(square(vertex) == WHITE || square(vertex) == BLACK)
+    stonesInString(parentString(vertex))
+  }
+
+  def mergedStringSize(color: Short, vertex: Int): Int = {
+    var totalSize = 0
+    val nbrParent = Array.ofDim[Int](4)
+    var nbrCount = 0
+
+    for (k <- 0 until 4) {
+      val ai = vertex + directions(k)
+
+      if (getSquare(ai) == color) {
+        val theParent = parentString(ai)
+
+        var found = false
+        var i = 0
+        while (i < nbrCount && !found) {
+          if (nbrParent(i) == theParent) {
+            found = true
+          }
+          i += 1
+        }
+
+        if (!found) {
+          totalSize += stringSize(ai)
+          nbrParent(nbrCount) = theParent
+          nbrCount += 1
+        }
+      }
+    }
+    totalSize
+  }
+
+  def moveToText(move: Int): String = {
+    val (row, column) = getCoord(move)
+    var result = ""
+
+    if (move >= 0 && move <= maxSq) {
+      result += (if (column < 8) 'A' + column else 'A' + column + 1)
+      result += (row + 1)
+    } else if (move == PASS) {
+      result += "pass"
+    } else if (move == RESIGN) {
+      result += "resign"
+    } else {
+      result += "error"
+    }
+
+    result
+  }
+
+  def moveToTextSgf(move: Int): String = {
+    var (row, column) = getCoord(move)
+
+    // SGF inverts rows
+    row = boardSize - row - 1
+    var result = ""
+
+    if (move >= 0 && move <= maxSq) {
+      if (column <= 25) {
+        result += ('a' + column)
+      } else {
+        result  += ('A' + column - 26)
+      }
+      if (row <= 25) {
+        result += ('a' + row)
+      } else {
+        result += ('A' + row - 26)
+      }
+    }
+    else if (move == PASS) { result += "tt" }
+    else if (move == RESIGN) { result += "tt" }
+    else { result += "error" }
+    result
   }
 
   private def addNeighbor(vertex: Short, color: Short): Unit = {
@@ -544,294 +826,11 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     -1
   }
 
-  /**
-    * Returns ko square or suicide tag. Does not update side to move.
-    * @param color player who placed a stone
-    * @param vertex position
-    * @return (ko square, capture) If no capture then return (-1, false)
-    */
-  def updateBoardFast(color: Short, vertex: Short): (Int, Boolean) = {
-    assert(square(vertex) == EMPTY)
-    assert(color == WHITE || color == BLACK)
-
-    val eyePlay: Boolean = (neighbors(vertex) & EYE_MASK(otherColor(color))) > 0   // did we play into an opponent eye?
-
-    // because we check for single stone suicide, we know it's a capture, and it might be a ko capture
-    var capture = false
-    if (eyePlay) {
-      return (updateBoardEye(color, vertex), true)
-    }
-
-    square(vertex) = color.toByte
-    next(vertex) = vertex
-    parentString(vertex) = vertex
-    stringLiberties(vertex) = countPointLiberties(vertex)
-    stonesInString(vertex) = 1
-    totalStones(color) += 1
-
-    addNeighbor(vertex, color)
-
-    for (k <- 0 until 4) {
-      val ai = vertex + directions(k)
-
-      if (square(ai) <= WHITE) {
-        assert(ai >= 0 && ai <= maxSq)
-
-        if (square(ai) == otherColor(color)) {
-          if (countStringLiberties(ai) <= 0) {
-            capture = true
-            prisoners(color) += removeStringFast(ai.toShort)
-          }
-        } else if (square(ai) == color) {
-          val ip  = parentString(vertex)
-          val aip = parentString(ai)
-
-          if (ip != aip) {
-            if (stonesInString(ip) >= stonesInString(aip)) {
-              mergeStrings(ip, aip)
-            } else {
-              mergeStrings(aip, ip)
-            }
-          }
-        }
-      }
-    }
-
-    /* move last vertex in list to our position */
-    emptyCnt -= 1
-    val lastvertex = emptySquare(emptyCnt)
-    emptyIdx(lastvertex) = emptyIdx(vertex)
-    emptySquare(emptyIdx(vertex)) = lastvertex
-    assert(countStringLiberties(vertex) < boardSize * boardSize)
-
-    /* check whether we still live (i.e. detect suicide) */
-    if (countStringLiberties(vertex) == 0) removeStringFast(vertex)
-    (-1, capture)
-  }
-
-  /** Check for 4 neighbors of the same color */
-  def isEye(color: Short, vertex: Short): Boolean = {
-    val ownSurrounded = (neighbors(vertex) & EYE_MASK(color)) > 0
-
-    // If not, it can't be an eye.
-    // This takes advantage of borders being colored both ways.
-    if (!ownSurrounded) {
-      return false
-    }
-
-    // 2 or more diagonals taken; 1 for side groups
-    val colorcount = Array.fill[Int](4)(0)
-
-    colorcount(square(vertex - 1 - boardSize - 2)) += 1
-    colorcount(square(vertex + 1 - boardSize - 2)) += 1
-    colorcount(square(vertex - 1 + boardSize + 2)) += 1
-    colorcount(square(vertex + 1 + boardSize + 2)) += 1
-
-    if (colorcount(INVALID) == 0) {
-      if (colorcount(otherColor(color)) > 1) return false
-    }
-    else if (colorcount(otherColor(color)) > 0) return false
-    true
-  }
-
-  def moveToText(move: Int): String = {
-    val (row, column) = getCoord(move)
-    var result = ""
-
-    if (move >= 0 && move <= maxSq) {
-      result += (if (column < 8) 'A' + column else 'A' + column + 1)
-      result += (row + 1)
-    } else if (move == PASS) {
-      result += "pass"
-    } else if (move == RESIGN) {
-      result += "resign"
-    } else {
-      result += "error"
-    }
-
-    result
-  }
-
-  def moveToTextSgf(move: Int): String = {
-    var (row, column) = getCoord(move)
-
-    // SGF inverts rows
-    row = boardSize - row - 1
-    var result = ""
-
-    if (move >= 0 && move <= maxSq) {
-      if (column <= 25) {
-        result += ('a' + column)
-      } else {
-        result  += ('A' + column - 26)
-      }
-      if (row <= 25) {
-        result += ('a' + row)
-      } else {
-        result += ('A' + row - 26)
-      }
-    }
-    else if (move == PASS) { result += "tt" }
-    else if (move == RESIGN) { result += "tt" }
-    else { result += "error" }
-    result
-  }
-
   private def getCoord(move: Int): (Int, Int) = {
     var column = move % (boardSize + 2) - 1
     var row = move / (boardSize + 2) - 1
     assert(move == PASS || move == RESIGN || (row >= 0 && row < boardSize))
     assert(move == PASS || move == RESIGN || (column >= 0 && column < boardSize))
     (row , column)
-  }
-
-  def testToMove(move: String): Int = {
-    if (move.length == 0 || move == "pass") {
-      return PASS
-    }
-    if (move == "resign") {
-      return RESIGN
-    }
-
-    val c1 = move(0).toLower
-    var x: Int = c1 - 'a'
-    // There is no i in ...
-    assert(x != 8)
-    if (x > 8) x -= 1
-    val remainder = move.substring(1)
-    val y: Int = remainder.toInt - 1
-    getVertex(x, y)
-  }
-
-  def getPrisoners(side: Short): Int = {
-    assert(side == WHITE || side == BLACK)
-    prisoners(side)
-  }
-
-  def blackToMove(): Boolean = toMove == BLACK
-  def getToMove: Byte = toMove
-  def setToMove(tomove: Byte): Unit = { toMove = tomove }
-  def getParentString(vertex: Short): Short = parentString(vertex)
-
-  def getGroupId(vertex: Int): Int = {
-    assert(square(vertex) == WHITE || square(vertex) == BLACK)
-    assert(parentString(vertex) == parentString(parentString(vertex)))
-    parentString(vertex)
-  }
-
-  def getStringStones(vertex: Int): Seq[Int] = {
-    val start = parentString(vertex)
-    var res: Seq[Int] = Seq() //Array.ofDim(stones(start))
-    var newpos = start
-
-    do {
-      assert(square(newpos) == square(vertex))
-      res :+= newpos.toInt
-      newpos = next(newpos)
-    } while (newpos != start)
-    res
-  }
-
-  def getString(vertex: Int): String = {
-    var result: String = ""
-    val start = parentString(vertex)
-    var newpos = start
-
-    do {
-      result += moveToText(newpos) + " "
-      newpos = next(newpos)
-    } while (newpos != start)
-
-    result.substring(0, result.length - 1) // remove last space
-  }
-
-  def fastInAtari(vertex: Int): Boolean = {
-    assert((square(vertex) < EMPTY) || (countStringLiberties(vertex) > maxSq))
-    val theParent = parentString(vertex)
-    stringLiberties(theParent) == 1
-  }
-
-  /**
-    * @param vertex the vertex to check if in atari
-    * @return 0 if not in atari, position of single liberty if it is
-    */
-  def inAtari(vertex: Short): Int = {
-    assert(square(vertex) < EMPTY)
-
-    if (countStringLiberties(vertex) > 1) {
-      return 0
-    }
-
-    assert(countStringLiberties(vertex) == 1)
-    var pos = vertex
-
-    do {
-      if (countPointLiberties(pos) > 0) {
-        for (k <- 0 until 4) {
-          val ai = pos + directions(k)
-          if (square(ai) == EMPTY) {
-            return ai
-          }
-        }
-      }
-
-      pos = next(pos)
-    } while (pos != vertex)
-    assert(false)  // should be unreachable
-    0
-  }
-
-  def getDir(vertex: Int): Int = directions(vertex)
-  def getExtraDir(vertex: Int): Int = extraDirections(vertex)
-
-  def getStoneList: String = {
-    var res: String = ""
-
-    for (i <- 0 until boardSize) {
-      for (j <- 0 until boardSize) {
-        val vertex: Int = getVertex(i, j)
-
-        if (getSquare(vertex) != EMPTY) {
-          res += moveToText(vertex) + " "
-        }
-      }
-    }
-    res.substring(0, res.length - 1) // remove final space
-  }
-
-  def stringSize(vertex: Int): Int = {
-    assert(vertex > 0 && vertex < maxSq)
-    assert(square(vertex) == WHITE || square(vertex) == BLACK)
-    stonesInString(parentString(vertex))
-  }
-
-  def mergedStringSize(color: Short, vertex: Int): Int = {
-    var totalSize = 0
-    val nbrParent = Array.ofDim[Int](4)
-    var nbrCount = 0
-
-    for (k <- 0 until 4) {
-      val ai = vertex + directions(k)
-
-      if (getSquare(ai) == color) {
-        val theParent = parentString(ai)
-
-        var found = false
-        var i = 0
-        while (i < nbrCount && !found) {
-          if (nbrParent(i) == theParent) {
-            found = true
-          }
-          i += 1
-        }
-
-        if (!found) {
-          totalSize += stringSize(ai)
-          nbrParent(nbrCount) = theParent
-          nbrCount += 1
-        }
-      }
-    }
-    totalSize
   }
 }

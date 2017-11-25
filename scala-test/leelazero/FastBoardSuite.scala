@@ -217,6 +217,46 @@ class FastBoardSuite extends FunSuite {
     assertResult(-24.5) { b.areaScore(0.5F) }
   }
 
+  test("estimate MC score 5x5") {
+    val b = createFilled5x5Board()
+    assertResult(1) { b.estimateMcScore(0.5F) }
+  }
+
+  test("final MC score 5x5") {
+    val b = createFilled5x5Board()
+    assertResult(0.5) { b.finalMcScore(0.5F) }
+  }
+
+  test("estimate MC score whiteField 5x5") {
+    val b = create5x5AllWhiteField()
+    assertResult(-9) { b.estimateMcScore(0.5F) }
+  }
+
+  test("final MC score whiteField 5x5") {
+    val b = create5x5AllWhiteField()
+    assertResult(-11.5) { b.finalMcScore(0.5F) }
+  }
+
+  test("isEye on white field 5x5") {
+    val b = create5x5AllWhiteField()
+    assertResult(true) { b.isEye(WHITE, b.getVertex(4, 4)) }
+    assertResult(true) { b.isEye(WHITE, b.getVertex(3, 3)) }
+    assertResult(true) { b.isEye(WHITE, b.getVertex(2, 2)) } // not really because its filled
+    assertResult(false) { b.isEye(WHITE, b.getVertex(1, 1)) }
+
+    assertResult(false) { b.isEye(BLACK, b.getVertex(3, 3)) }
+    assertResult(false) { b.isEye(BLACK, b.getVertex(2, 2)) }
+  }
+
+  /**
+         a b c d e
+       5 . . O O .  5
+       4 . . O . O  4
+       3 O O O O .  3
+       2 . . O . .  2
+       1 . . O . .  1
+         a b c d e
+    */
   private def create5x5AllWhiteField(): FastBoard = {
     val b = new FastBoard(5)
     b.updateBoardFast(WHITE, b.getVertex(1, 2))
@@ -229,18 +269,18 @@ class FastBoardSuite extends FunSuite {
     b.updateBoardFast(WHITE, b.getVertex(4, 3))
     b.updateBoardFast(WHITE, b.getVertex(0, 2))
     b.updateBoardFast(WHITE, b.getVertex(2, 0))
+    println(b.toString())
     b
   }
 
   /**
-    *   a b c d e
+        a b c d e
       5 . . O . .  5
       4 X . O . .  4
       3 . . O X .  3
       2 . X X O .  2
       1 . . . . .  1
         a b c d e
-    * @return
     */
   private def createFilled5x5Board(): FastBoard = {
     val b = new FastBoard(5)
