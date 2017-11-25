@@ -454,103 +454,13 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
   }
 
   override def toString: String = toString(-1)
-  def toString(lastMove: Short): String = {
-    val colLabels = createColumnLabels()
-    var result = "\n" + colLabels
+  def toString(lastMove: Short): String = new FastBoardSerializer(this).serialize(lastMove)
 
-    for (j <- boardSize - 1 to 0 by -1) {
-      result += f"${j + 1}%2d"
-      if (lastMove == getVertex(0, j))
-        result += "("
-      else
-        result += " "
-      for (i <- 0 until boardSize) {
-        result += (getSquare(i, j) match {
-          case WHITE => "O"
-          case BLACK => "X"
-          case _ => if (starpoint(boardSize, i, j)) "+" else "."
-        })
-        if (lastMove == getVertex(i, j)) result += ")"
-        else if (i != boardSize - 1 && lastMove == getVertex(i, j) + 1) result += "("
-        else result += " "
-      }
-      result += f"${j + 1}%2d\n"
-    }
-    result += colLabels
-    result + "\n"
-  }
 
   def displayLiberties(lastMove: Short):  Unit = {
-    println(toLibertiesString(lastMove))
-    print("\n")
-    println(toStringIdString(lastMove))
-    print("\n")
-  }
-
-  /** @return a string that displays the board with the number of string liberties at every played position */
-  private def toLibertiesString(lastMove: Short): String = {
-    var res = createColumnLabels()
-    for (j <- boardSize - 1 to 0 by -1) {
-      res += f"${j + 1}%2d"
-      if (lastMove == getVertex(0,j)) res += "("
-      else res += " "
-      for (i <- 0 until boardSize) {
-        if (getSquare(i,j) == WHITE) {
-          var libs = countRealLiberties(getVertex(i, j))
-          if (libs > 9) { libs = 9 }
-          res += f"$libs%1d"
-        } else if (getSquare(i, j) == BLACK) {
-          var libs = countRealLiberties(getVertex(i, j))
-          if (libs > 9) { libs = 9; }
-          res += f"$libs%1d"
-        } else if (starpoint(boardSize, i, j)) {
-          res += "+"
-        } else res += "."
-
-        if (lastMove == getVertex(i, j)) print(")")
-        else if (i != boardSize-1 && lastMove == getVertex(i, j) + 1)
-          res += "("
-        else res += " "
-      }
-      res += f"${j + 1}%2d\n"
-    }
-    res
-  }
-
-  /** @return a string that displays the board with the id of the string at each string point */
-  private def toStringIdString(lastMove: Short): String = {
-    var res = createColumnLabels("  ")
-    for (j <- boardSize - 1 to 0 by -1) {
-      res += f"${j + 1}%2d"
-      if (lastMove == getVertex(0, j)) res += "("
-      else res += " "
-      for (i <- 0 until boardSize) {
-        val color = getSquare(i, j)
-        if (color == WHITE || color == BLACK) {
-          val stringId = parentString(getVertex(i, j))
-          res += f"$stringId%2d"
-        } else if (starpoint(boardSize, i, j)) {
-          res += "+ "
-        } else res += ". "
-        if (lastMove == getVertex(i, j)) res += ")"
-        else if (i != boardSize-1 && lastMove == getVertex(i, j) + 1) res += "("
-        else res += " "
-      }
-      res += f"${j + 1}%2d\n"
-    }
-    res
-  }
-
-  private def createColumnLabels(padding: String = " "): String = {
-    var result = "   "
-    for (i <- 0 until boardSize) {
-      if (i < 25) {
-        result += (if ('a' + i < 'i') 'a' + i else 'a' + i + 1).toChar + padding
-      } else {
-        result += (if ('A' + (i - 25) < 'I') 'A' + (i - 25) else 'A' + (i - 25) + 1).toChar + padding
-      }
-    }
-    result.substring(0, result.length - 1) + "\n"
+    val fbs = new FastBoardSerializer(this)
+    println(fbs.toLibertiesString(lastMove))
+    println(fbs.toStringIdString(lastMove))
   }
 
   def starPoint(size: Short, point: Int): Boolean = {
@@ -825,6 +735,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
   def blackToMove(): Boolean = toMove == BLACK
   def getToMove: Byte = toMove
   def setToMove(tomove: Byte): Unit = { toMove = tomove }
+  def getParentString(vertex: Short): Short = parentString(vertex)
 
   def getGroupId(vertex: Int): Int = {
     assert(square(vertex) == WHITE || square(vertex) == BLACK)
