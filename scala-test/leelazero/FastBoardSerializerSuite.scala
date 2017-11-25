@@ -67,8 +67,67 @@ class FastBoardSerializerSuite extends FunSuite {
        |""")) { fbs.toStringIdString(lastMove = b.getVertex(2, 2)) }
   }
 
+  test("Serialize an empty 7x7 board") {
+    val b = new FastBoard(7)
+    val fbs = new FastBoardSerializer(b)
+    assertResult(clean("""
+       |   a b c d e f g
+       | 7 . . . . . . .  7
+       | 6 . . . . . . .  6
+       | 5 . . . . . . .  5
+       | 4 . . . . . . .  4
+       | 3 . . . . . . .  3
+       | 2 . . . . . . .  2
+       | 1 . . . . . . .  1
+       |   a b c d e f g
+       |
+       |""")) { fbs.serialize() }
+  }
+
+  test("Serialize an empty 9x9 board") {
+    val b = new FastBoard(9)
+    val fbs = new FastBoardSerializer(b)
+    assertResult(clean("""
+       |   a b c d e f g h j
+       | 9 . . . . . . . . .  9
+       | 8 . . . . . . . . .  8
+       | 7 . . + . + . + . .  7
+       | 6 . . . . . . . . .  6
+       | 5 . . + . + . + . .  5
+       | 4 . . . . . . . . .  4
+       | 3 . . + . + . + . .  3
+       | 2 . . . . . . . . .  2
+       | 1 . . . . . . . . .  1
+       |   a b c d e f g h j
+       |
+       |""")) { fbs.serialize() }
+  }
+
+  test("Serialize an empty 13x13 board") {
+    val b = new FastBoard(13)
+    val fbs = new FastBoardSerializer(b)
+    assertResult(clean("""
+       |   a b c d e f g h j k l m n
+       |13 . . . . . . . . . . . . . 13
+       |12 . . . . . . . . . . . . . 12
+       |11 . . . . . . . . . . . . . 11
+       |10 . . . + . . + . . + . . . 10
+       | 9 . . . . . . . . . . . . .  9
+       | 8 . . . . . . . . . . . . .  8
+       | 7 . . . + . . + . . + . . .  7
+       | 6 . . . . . . . . . . . . .  6
+       | 5 . . . . . . . . . . . . .  5
+       | 4 . . . + . . + . . + . . .  4
+       | 3 . . . . . . . . . . . . .  3
+       | 2 . . . . . . . . . . . . .  2
+       | 1 . . . . . . . . . . . . .  1
+       |   a b c d e f g h j k l m n
+       |
+       |""")) { fbs.serialize() }
+  }
+
   /**
-    * @return
+    * @return partially filled 3x3 board
     */
   private def createFilled3x3Board(): FastBoard = {
     val b = new FastBoard(3)

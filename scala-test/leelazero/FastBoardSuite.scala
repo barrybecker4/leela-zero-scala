@@ -185,7 +185,7 @@ class FastBoardSuite extends FunSuite {
       b.getVertex(1, 1), b.getVertex(2, 1), b.getVertex(3, 1), b.getVertex(4, 1), b.getVertex(2, 2), b.getVertex(3, 2), b.getVertex(0, 3)
     )
     assertResult("4, 4, 2, 16376, 5, 2, 3") {   // 16376 used for black spaces?
-      vertices.map(v => b.countRealLiberties(v)).mkString(", ")
+      vertices.map(v => b.countStringLiberties(v)).mkString(", ")
     }
   }
 
@@ -198,6 +198,23 @@ class FastBoardSuite extends FunSuite {
     assertResult("3, 1, 2, 2, 1, 2, 3") {  // correct!
       vertices.map(v => b.countNeighbors(EMPTY, v)).mkString(", ")
     }
+  }
+
+  test("getStoneCount on 5x5") {
+    val b = createFilled5x5Board()
+    assertResult(8) { b.getStoneCount }
+  }
+
+  test("calcAreaScore on 5x5") {
+    val b = createFilled5x5Board()
+    assertResult(-3.5) { b.areaScore(6.5F) }
+    assertResult(2.5) { b.areaScore(0.5F) }
+  }
+
+  test("calcAreaScore on whiteField 5x5") {
+    val b = create5x5AllWhiteField()
+    assertResult(-30.5) { b.areaScore(6.5F) }
+    assertResult(-24.5) { b.areaScore(0.5F) }
   }
 
   private def create5x5AllWhiteField(): FastBoard = {

@@ -20,7 +20,7 @@ class FastBoardSerializer(board: FastBoard) {
         result += (board.getSquare(i, j) match {
           case WHITE => "O"
           case BLACK => "X"
-          case _ => if (board.starpoint(size, i, j)) "+" else "."
+          case _ => if (starPoint(size, i, j)) "+" else "."
         })
         if (lastMove == board.getVertex(i, j)) result += ")"
         else if (i != size - 1 && lastMove == board.getVertex(i, j) + 1) result += "("
@@ -43,15 +43,15 @@ class FastBoardSerializer(board: FastBoard) {
       for (i <- 0 until size) {
         val vertex = board.getVertex(i, j)
         if (board.getSquare(i, j) == WHITE) {
-          var libs = board.countRealLiberties(vertex)
+          var libs = board.countStringLiberties(vertex)
           if (libs > 9) { libs = 9 }
           res += f"$libs%1d"
         } else if (board.getSquare(i, j) == BLACK) {
-          var libs = board.countRealLiberties(vertex)
+          var libs = board.countStringLiberties(vertex)
           if (libs > 9)
             libs = 9
           res += f"$libs%1d"
-        } else if (board.starpoint(size, i, j)) {
+        } else if (starPoint(size, i, j)) {
           res += "+"
         } else res += "."
 
@@ -79,7 +79,7 @@ class FastBoardSerializer(board: FastBoard) {
         if (color == WHITE || color == BLACK) {
           val stringId = board.getParentString(vertex)
           res += f"$stringId%2d"
-        } else if (board.starpoint(size, i, j)) {
+        } else if (starPoint(size, i, j)) {
           res += "+ "
         } else res += ". "
         if (lastMove == vertex) res += ")"
@@ -103,4 +103,33 @@ class FastBoardSerializer(board: FastBoard) {
     "   " + result.trim + "\n"
   }
 
+  /** @return true if the specified position is a star point */
+  def starPoint(size: Short, x: Int, y: Int): Boolean = starPoint(size, y * size + x)
+
+  def starPoint(size: Short, point: Int): Boolean = {
+    val stars = Array.ofDim[Int](3)
+    val points = Array.ofDim[Int](2)
+    var hits = 0
+
+    if (size % 2 == 0 || size < 9) {
+      return false
+    }
+
+    stars(0) = if (size >= 13) 3 else 2
+    stars(1) = size / 2
+    stars(2) = size - 1 - stars(0)
+
+    points(0) = point / size
+    points(1) = point % size
+
+    for (i <- 0 until 2) {
+      for (j <- 0 until 3) {
+        if (points(i) == stars(j)) {
+          hits += 1
+        }
+      }
+    }
+
+    hits >= 2
+  }
 }

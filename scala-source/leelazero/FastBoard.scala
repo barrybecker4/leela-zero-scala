@@ -216,7 +216,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     for (k <- 0 until 4) {
       val ai = vertex + directions(k)
 
-      val libs = countRealLiberties(ai)
+      val libs = countStringLiberties(ai)
       if (getSquare(ai) == color) {
         if (libs > 1) {
           return false // connecting to live group = never suicide
@@ -235,7 +235,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
 
     for (k <- 0 until 4) {
       val ai = vertex + directions(k)
-      val libs = countRealLiberties(ai)
+      val libs = countStringLiberties(ai)
 
       if (libs == 0 && getSquare(ai) != color) {
         opps_live = false
@@ -268,7 +268,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     * but in practice there is a significant speed difference.
     * @return number of real liberties
     */
-  def countRealLiberties(vertex: Int): Int = stringLiberties(parentString(vertex))
+  def countStringLiberties(vertex: Int): Int = stringLiberties(parentString(vertex))
 
   /**
     * @return Count of neighbors of color c at vertex v.
@@ -277,6 +277,71 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
   def countNeighbors(c: Short, vertex: Short): Short = {
     assert(c == WHITE || c == BLACK || c == EMPTY)
     ((neighbors(vertex) >> (NBR_SHIFT * c)) & 7).toShort
+  }
+
+  def getStoneCount: Int = totalStones.sum
+
+  /**
+    * The score is from the point of view of the black player. A negative score means white is leading.
+    * @return score needed for scoring passed out games not in Monte-Carlo play-outs
+    */
+  def areaScore(komi: Float): Float = {
+    val white = calcReachColor(WHITE)
+    val black = calcReachColor(BLACK)
+    var score = -komi
+
+    for (i <- 0 until boardSize) {
+      for (j <- 0 until boardSize) {
+        val vertex = getVertex(i, j)
+        val isWhite = white(vertex)
+        val isBlack = black(vertex)
+        if (isWhite && !isBlack) {
+          score -= 1.0F
+        } else if (isBlack && !isWhite) {
+          score += 1.0F
+        }
+      }
+    }
+    score
+  }
+
+  def estimateMcScore(komi: Float): Int = {
+    val wsc = totalStones(BLACK)
+    val bsc = totalStones(WHITE)
+    bsc - wsc - komi.toShort + 1
+  }
+
+  def finalMcScore(komi: Float): Float = {
+    val maxempty = emptyCnt
+    var bsc = totalStones(BLACK)
+    var wsc = totalStones(WHITE)
+
+    for (v <- 0 until maxempty) {
+      val i = emptySquare(v)
+      assert(square(i) == EMPTY)
+
+      val allblack = ((neighbors(i) >> (NBR_SHIFT * BLACK)) & 7) == 4
+      val allwhite = ((neighbors(i) >> (NBR_SHIFT * WHITE)) & 7) == 4
+
+      if (allwhite) { wsc += 1 }
+      else if (allblack) { bsc += 1 }
+    }
+    bsc - wsc + komi
+  }
+
+  /** Print the board as text */
+  def displayBoard(lastMove: Short = -1): Unit = {
+    print(toString(lastMove))
+  }
+
+  override def toString: String = toString(-1)
+  def toString(lastMove: Short): String = new FastBoardSerializer(this).serialize(lastMove)
+
+
+  def displayLiberties(lastMove: Short):  Unit = {
+    val fbs = new FastBoardSerializer(this)
+    println(fbs.toLibertiesString(lastMove))
+    println(fbs.toStringIdString(lastMove))
   }
 
   private def addNeighbor(vertex: Short, color: Short): Unit = {
@@ -341,10 +406,10 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
 
     if (eyePlay > 0) return false
 
-    !((countRealLiberties(vertex - 1) <= 1) ||
-      (countRealLiberties(vertex + 1) <= 1) ||
-      (countRealLiberties(vertex + boardSize + 2) <= 1) ||
-      (countRealLiberties(vertex - boardSize - 2) <= 1))
+    !((countStringLiberties(vertex - 1) <= 1) ||
+      (countStringLiberties(vertex + 1) <= 1) ||
+      (countStringLiberties(vertex + boardSize + 2) <= 1) ||
+      (countStringLiberties(vertex - boardSize - 2) <= 1))
   }
 
   /** @return the number of stones in the string that was removed */
@@ -403,95 +468,6 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     bd
   }
 
-  /** @return  score needed for scoring passed out games not in MC play-outs */
-  def areaScore(komi: Float): Float = {
-    val white = calcReachColor(WHITE)
-    val black = calcReachColor(BLACK)
-    var score = -komi
-
-    for (i <- 0 until boardSize) {
-      for (j <- 0 until boardSize) {
-        val vertex = getVertex(i, j)
-        if (white(vertex) && !black(vertex)) {
-          score -= 1.0F
-        } else if (black(vertex) && !white(vertex)) {
-          score += 1.0F
-        }
-      }
-    }
-    score
-  }
-
-  def getStoneCount: Int = totalStones.sum    // totalStones(BLACK) + totalStones(WHITE)
-
-  def estimateMcScore(komi: Float): Int = {
-    val wsc = totalStones(BLACK)
-    val bsc = totalStones(WHITE)
-    bsc - wsc - komi.toShort + 1
-  }
-
-  def finalMcScore(komi: Float): Float = {
-    val maxempty = emptyCnt
-    var bsc = totalStones(BLACK)
-    var wsc = totalStones(WHITE)
-
-    for (v <- 0 until maxempty) {
-      val i = emptySquare(v)
-      assert(square(i) == EMPTY)
-
-      val allblack = ((neighbors(i) >> (NBR_SHIFT * BLACK)) & 7) == 4
-      val allwhite = ((neighbors(i) >> (NBR_SHIFT * WHITE)) & 7) == 4
-
-      if (allwhite) { wsc += 1 }
-      else if (allblack) { bsc += 1 }
-    }
-    bsc - wsc + komi
-  }
-
-  /** Print the board as text */
-  def displayBoard(lastMove: Short = -1): Unit = {
-    print(toString(lastMove))
-  }
-
-  override def toString: String = toString(-1)
-  def toString(lastMove: Short): String = new FastBoardSerializer(this).serialize(lastMove)
-
-
-  def displayLiberties(lastMove: Short):  Unit = {
-    val fbs = new FastBoardSerializer(this)
-    println(fbs.toLibertiesString(lastMove))
-    println(fbs.toStringIdString(lastMove))
-  }
-
-  def starPoint(size: Short, point: Int): Boolean = {
-    val stars = Array.ofDim[Int](3)
-    val points = Array.ofDim[Int](2)
-    var hits = 0
-
-    if (size % 2 == 0 || size < 9) {
-      return false
-    }
-
-    stars(0) = if (size >= 13) 3 else 2
-    stars(1) = size / 2
-    stars(2) = size - 1 - stars(0)
-
-    points(0) = point / size
-    points(1) = point % size
-
-    for (i <- 0 until 2) {
-      for (j <- 0 until 3) {
-        if (points(i) == stars(j)) {
-          hits += 1
-        }
-      }
-    }
-
-    hits >= 2
-  }
-
-  def starpoint(size: Short, x: Int, y: Int): Boolean = starPoint(size, y * size + x)
-
   private def mergeStrings(ip: Short, aip: Short): Unit = {
     assert(ip != maxSq && aip != maxSq)
     stonesInString(ip) += stonesInString(aip) // merge stones
@@ -547,7 +523,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
       val ai = i + directions(k)
       assert(ai >= 0 && ai <= maxSq)
 
-      if (countRealLiberties(ai) <= 0) {
+      if (countStringLiberties(ai) <= 0) {
         val this_captured = removeStringFast(ai.toShort)
         captured_sq = ai
         captured_stones += this_captured
@@ -602,7 +578,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
         assert(ai >= 0 && ai <= maxSq)
 
         if (square(ai) == otherColor(color)) {
-          if (countRealLiberties(ai) <= 0) {
+          if (countStringLiberties(ai) <= 0) {
             capture = true
             prisoners(color) += removeStringFast(ai.toShort)
           }
@@ -626,10 +602,10 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     val lastvertex = emptySquare(emptyCnt)
     emptyIdx(lastvertex) = emptyIdx(vertex)
     emptySquare(emptyIdx(vertex)) = lastvertex
-    assert(countRealLiberties(vertex) < boardSize * boardSize)
+    assert(countStringLiberties(vertex) < boardSize * boardSize)
 
     /* check whether we still live (i.e. detect suicide) */
-    if (countRealLiberties(vertex) == 0) removeStringFast(vertex)
+    if (countStringLiberties(vertex) == 0) removeStringFast(vertex)
     (-1, capture)
   }
 
@@ -770,7 +746,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
   }
 
   def fastInAtari(vertex: Int): Boolean = {
-    assert((square(vertex) < EMPTY) || (countRealLiberties(vertex) > maxSq))
+    assert((square(vertex) < EMPTY) || (countStringLiberties(vertex) > maxSq))
     val theParent = parentString(vertex)
     stringLiberties(theParent) == 1
   }
@@ -782,11 +758,11 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
   def inAtari(vertex: Short): Int = {
     assert(square(vertex) < EMPTY)
 
-    if (countRealLiberties(vertex) > 1) {
+    if (countStringLiberties(vertex) > 1) {
       return 0
     }
 
-    assert(countRealLiberties(vertex) == 1)
+    assert(countStringLiberties(vertex) == 1)
     var pos = vertex
 
     do {
