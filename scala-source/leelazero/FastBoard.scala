@@ -408,12 +408,11 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     (-1, capture)
   }
 
-  /** Check for 4 neighbors of the same color */
+  /** @return true if surrounded on 4 sides by the specified color and there are enough diagonals to avoid false eye*/
   def isEye(color: Short, vertex: Short): Boolean = {
     val ownSurrounded = (neighbors(vertex) & EYE_MASK(color)) > 0
 
-    // If not, it can't be an eye.
-    // This takes advantage of borders being colored both ways.
+    // If not, it can't be an eye. This takes advantage of borders being colored both ways.
     if (!ownSurrounded) {
       return false
     }
