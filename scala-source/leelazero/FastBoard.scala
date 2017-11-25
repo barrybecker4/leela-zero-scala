@@ -49,14 +49,14 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
   private var boardSize: Short = size
   private var scoreMoves: Seq[MoveScore] = _
 
-  private var square: Array[Byte] = _    // Board contents         std::array<square_t, MAXSQ>
-  private var next: Array[Short] = _     // next stone in string   std::array<unsigned short, MAXSQ+1>
+  private var square: Array[Byte] = _    // Board contents
+  private var next: Array[Short] = _     // next stone in string
   private var parent: Array[Short] = _   // parent node of string
   private var liberties: Array[Int] = _     // liberties per string parent
   private var stones: Array[Int] = _   // stones per string parent
   private var neighbors: Array[Int] = _  // counts of neighboring stones
-  private var directions: Array[Int] = _          // movement in 4 directions
-  private var extraDirections: Array[Int] = _     // movement in 8 directions
+  private var directions: Array[Int] = _      // movement in 4 directions
+  private var extraDirections: Array[Int] = _ // movement in 8 directions
   private var prisoners: Array[Int] = _     // prisoners per color
   private var totalStones: Array[Int] = _   // total stones per color
   private var critical: Seq[Short] = Seq()  // queue of critical points  (use dropRight to pop)
@@ -69,7 +69,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
 
   def getBoardSize: Short = boardSize
 
-  /** @return index into 1d board arrays from the x, y coordinate */
+  /** @return index into 1D board arrays from the x, y coordinate */
   def getVertex(x: Short, y: Short): Short = {
     assert(x >= 0 && x < boardSize, "x out of range: " + x)
     assert(y >= 0 && y < boardSize, "y out of range: " + y)
@@ -80,7 +80,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
 
   def getVertex(x: Int, y: Int): Short = getVertex(x.toShort, y.toShort)
 
-  /** @return the x,y coordinate from the 1d index */
+  /** @return the x,y coordinate from the 1D index */
   def getXY(vertex: Short): Point = {
     val x: Short = ((vertex % (boardSize + 2)) - 1).toShort
     val y: Short = ((vertex / (boardSize + 2)) - 1).toShort
@@ -147,7 +147,10 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     critical = Seq()
     emptySquare = Array.ofDim[Short](maxSq)
     emptyIdx = Array.ofDim[Int](maxSq)
+    initializeAfterReset()
+  }
 
+  private def initializeAfterReset(): Unit = {
     toMove = BLACK
     prisoners(BLACK) = 0
     prisoners(WHITE) = 0
@@ -155,19 +158,19 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     totalStones(WHITE) = 0
     emptyCnt = 0
 
-    directions(0) = -size - 2
+    directions(0) = -boardSize - 2
     directions(1) = +1
-    directions(2) = +size + 2
+    directions(2) = +boardSize + 2
     directions(3) = -1
 
-    extraDirections(0) = -size - 2 - 1
-    extraDirections(1) = -size - 2
-    extraDirections(2) = -size - 2 + 1
+    extraDirections(0) = -boardSize - 2 - 1
+    extraDirections(1) = -boardSize - 2
+    extraDirections(2) = -boardSize - 2 + 1
     extraDirections(3) = -1
     extraDirections(4) = +1
-    extraDirections(5) = +size + 2 - 1
-    extraDirections(6) = +size + 2
-    extraDirections(7) = +size + 2 + 1
+    extraDirections(5) = +boardSize + 2 - 1
+    extraDirections(6) = +boardSize + 2
+    extraDirections(7) = +boardSize + 2 + 1
 
     for (i <- 0 until maxSq) {
       square(i) = INVALID
@@ -175,8 +178,16 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
       parent(i) = maxSq
     }
 
-    for (i <- 0 until size) {
-      for (j <- 0 until size) {
+    initializeNeighbours()
+
+    parent(maxSq ) = maxSq
+    liberties(maxSq) = MAX_LIBS   /* subtract from this */
+    next(maxSq) = maxSq
+  }
+
+  private def initializeNeighbours(): Unit = {
+    for (i <- 0 until boardSize) {
+      for (j <- 0 until boardSize) {
         val vertex: Short = getVertex(i, j)
 
         square(vertex) = EMPTY
@@ -184,26 +195,17 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
         emptySquare(emptyCnt) = vertex
         emptyCnt = (emptyCnt + 1).toShort
 
-        if (i == 0 || i == size - 1) {
-          neighbors(vertex) += (1 << (NBR_SHIFT * BLACK)) | (1 << (NBR_SHIFT * WHITE))
-          neighbors(vertex) += 1 << (NBR_SHIFT * EMPTY)
-        } else {
-          neighbors(vertex) += 2 << (NBR_SHIFT * EMPTY)
-        }
-
-        if (j == 0 || j == size - 1) {
-          neighbors(vertex) += (1 << (NBR_SHIFT * BLACK))| (1 << (NBR_SHIFT * WHITE))
-          neighbors(vertex) += 1 << (NBR_SHIFT * EMPTY)
-        } else {
-          neighbors(vertex) += 2 << (NBR_SHIFT * EMPTY)
-        }
+        if (i == 0 || i == boardSize - 1) initializeOnBorder(vertex) else initializeCenterPoint(vertex)
+        if (j == 0 || j == boardSize - 1) initializeOnBorder(vertex) else initializeCenterPoint(vertex)
       }
     }
-
-    parent(maxSq ) = maxSq
-    liberties(maxSq) = MAX_LIBS   /* subtract from this */
-    next(maxSq) = maxSq
   }
+
+  private def initializeOnBorder(vertex: Short): Unit = {
+    neighbors(vertex) += (1 << (NBR_SHIFT * BLACK)) | (1 << (NBR_SHIFT * WHITE))
+    neighbors(vertex) += 1 << (NBR_SHIFT * EMPTY)
+  }
+  private def initializeCenterPoint(vertex: Short): Unit = { neighbors(vertex) += 2 << (NBR_SHIFT * EMPTY) }
 
   def isSuicide(vertex: Short, color: Short): Boolean = {
     if (countPseudoLiberties(vertex) > 0) return false
@@ -216,20 +218,17 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
       val libs = liberties(parent(ai))
       if (getSquare(ai) == color) {
         if (libs > 1) {
-          // connecting to live group = never suicide
-          return false
+          return false // connecting to live group = never suicide
         }
         connecting = true
       } else {
         if (libs <= 1) {
-          // killing a neighbor is never suicide
-          return false
+          return false // killing a neighbor is never suicide
         }
       }
     }
 
     addNeighbor(vertex, color)
-
     var opps_live = true
     var ours_die = true
 
