@@ -459,12 +459,13 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
   def blackToMove(): Boolean = toMove == BLACK
   def getToMove: Byte = toMove
   def setToMove(tomove: Byte): Unit = { toMove = tomove }
-  def getParentString(vertex: Short): Short = parentString(vertex)
 
-  def getGroupId(vertex: Int): Int = {
+  /** @return the id of the parent string */
+  def getParentString(vertex: Int): Short = {
     assert(square(vertex) == WHITE || square(vertex) == BLACK)
-    assert(parentString(vertex) == parentString(parentString(vertex)))
-    parentString(vertex)
+    val parent = parentString(vertex)
+    assert(parent == parentString(parent))
+    parent
   }
 
   def getStringStones(vertex: Int): Seq[Int] = {
@@ -480,12 +481,14 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     res
   }
 
+  // reimplement this in terms of getStringStones
   def getString(vertex: Int): String = {
     var result: String = ""
     val start = parentString(vertex)
     var newpos = start
 
     do {
+      assert(square(newpos) == square(vertex))
       result += moveToText(newpos) + " "
       newpos = next(newpos)
     } while (newpos != start)

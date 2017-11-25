@@ -268,6 +268,28 @@ class FastBoardSuite extends FunSuite {
     assertResult(0) {b.getPrisoners(WHITE)}
     assertResult(1) {b.getPrisoners(BLACK)}
   }
+
+  test("toMove") {
+    val b = createFilled5x5Board()
+    assertResult(BLACK) { b.getToMove }
+    assertResult(true)  { b.blackToMove() }
+    b.setToMove(WHITE)
+    assertResult(false) { b.blackToMove() }
+    assertResult(WHITE) { b.getToMove }
+  }
+
+  test("getParentString") {
+    val b = createFilled5x5Board()
+    assertResult(17) {b.getParentString(b.getVertex(1, 1))}
+    assertResult(31) {b.getParentString(b.getVertex(2, 2))}
+    assertResult(31) {b.getParentString(b.getVertex(3, 3))}
+    assertResult(40) {b.getParentString(b.getVertex(4, 4))}
+    assertThrows[AssertionError] {
+      b.getParentString(b.getVertex(0, 1)) // no string here
+    }
+  }
+
+
   /**
          a b c d e
        5 . . O O .  5
