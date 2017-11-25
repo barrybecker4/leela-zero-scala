@@ -272,7 +272,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     * @return Count of neighbors of color c at vertex v.
     *       The border of the board has fake neighours of both colors.
     */
-  private def countNeighbors(c: Short, vertex: Short): Short = {
+  def countNeighbors(c: Short, vertex: Short): Short = {
     assert(c == WHITE || c == BLACK || c == EMPTY)
     ((neighbors(vertex) >> (NBR_SHIFT * c)) & 7).toShort
   }
@@ -280,8 +280,8 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
   private def addNeighbor(vertex: Short, color: Short): Unit = {
     assert(color == WHITE || color == BLACK || color == EMPTY)
 
-    val nbrPars = Array[Short](4)
-    var nbr_parent_cnt = 0
+    val nbrParents = Array.ofDim[Short](4)
+    var nbrParentCount = 0
 
     for (k <- 0 until 4) {
       val ai = vertex + directions(k)
@@ -289,24 +289,24 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
 
       var found = false
       var i = 0
-      while (i < nbr_parent_cnt && !found) {
-        if (nbrPars(i) == parent(ai)) {
+      while (i < nbrParentCount && !found) {
+        if (nbrParents(i) == parent(ai)) {
           found = true
         }
         i += 1
       }
       if (!found) {
         liberties(parent(ai)) -= 1
-        nbrPars(nbr_parent_cnt) = parent(ai)
-        nbr_parent_cnt += 1
+        nbrParents(nbrParentCount) = parent(ai)
+        nbrParentCount += 1
       }
     }
   }
 
   private def removeNeighbor(vertex: Short, color: Short): Unit = {
     assert(color == WHITE || color == BLACK || color == EMPTY)
-    val nbrPars = Array[Short](4)
-    var nbr_parent_cnt = 0
+    val nbrParents = Array.ofDim[Short](4)
+    var nbrParentCount = 0
 
     for (k <- 0 until 4) {
       val ai = vertex + directions(k)
@@ -315,15 +315,16 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
 
       var found = false
       var i = 0
-      while (i < nbr_parent_cnt && !found) {
-        if (nbrPars(i) == parent(ai)) {
+      while (i < nbrParentCount && !found) {
+        if (nbrParents(i) == parent(ai)) {
           found = true
         }
+        i += 1
       }
       if (!found) {
         liberties(parent(ai)) += 1
-        nbrPars(nbr_parent_cnt) = parent(ai)
-        nbr_parent_cnt += 1
+        nbrParents(nbrParentCount) = parent(ai)
+        nbrParentCount += 1
       }
     }
   }

@@ -162,26 +162,59 @@ class FastBoardSuite extends FunSuite {
       assertResult(false) { b.isSuicide(b.getVertex(2, 1), BLACK) }
   }
 
-  /*
+
   test("isSuicide when suicide (for black in all white field)") {
-    val b = new FastBoard(5)
-    b.setSquare(1, 2, WHITE)
-    b.setSquare(2, 1, WHITE)
-    b.setSquare(2, 2, WHITE)
-    b.setSquare(2, 3, WHITE)
-    b.setSquare(2, 4, WHITE)
-    b.setSquare(3, 2, WHITE)
-    b.setSquare(3, 4, WHITE)
-    b.setSquare(4, 3, WHITE)
-    b.setSquare(0, 2, WHITE)
-    b.setSquare(2, 0, WHITE)
+    val b = create5x5AllWhiteField()
     println(b.toString())
 
     assertResult(false) { b.isSuicide(b.getVertex(1, 1), BLACK) }
     assertResult(true) {
-      val v = b.getVertex(3, 4)
-      b.isSuicide(v, BLACK)
+      b.isSuicide(b.getVertex(3, 3), BLACK)
+    }
+    assertResult(true) {
+      b.isSuicide(b.getVertex(4, 4), BLACK)
+    }
+    assertResult(false) {
+      b.isSuicide(b.getVertex(4, 2), BLACK)
     }
     assertResult(true) { b.isSuicide(b.getVertex(4, 4), BLACK) }
-  }*/
+  }
+
+  test("Count real liberties on 5x5") {
+    val b = createFilled5x5Board()
+    val vertices = Array(
+      b.getVertex(1, 1), b.getVertex(2, 1), b.getVertex(3, 1), b.getVertex(4, 1),
+      b.getVertex(2, 2), b.getVertex(3, 2), b.getVertex(0, 3)
+    )
+    assertResult("16377, 2, 2, 16377, 5, 2, 3") {   // some of these seem wrong, but maybe I don't understand
+      vertices.map(v => b.countRealLiberties(v)).mkString(", ")
+    }
+  }
+
+  private def create5x5AllWhiteField(): FastBoard = {
+    val b = new FastBoard(5)
+    b.updateBoardFast(WHITE, b.getVertex(1, 2))
+    b.updateBoardFast(WHITE, b.getVertex(2, 1))
+    b.updateBoardFast(WHITE, b.getVertex(2, 2))
+    b.updateBoardFast(WHITE, b.getVertex(2, 3))
+    b.updateBoardFast(WHITE, b.getVertex(2, 4))
+    b.updateBoardFast(WHITE, b.getVertex(3, 2))
+    b.updateBoardFast(WHITE, b.getVertex(3, 4))
+    b.updateBoardFast(WHITE, b.getVertex(4, 3))
+    b.updateBoardFast(WHITE, b.getVertex(0, 2))
+    b.updateBoardFast(WHITE, b.getVertex(2, 0))
+    b
+  }
+
+  private def createFilled5x5Board(): FastBoard = {
+    val b = new FastBoard(5)
+    b.updateBoardFast(BLACK, b.getVertex(2, 1))
+    b.updateBoardFast(WHITE, b.getVertex(3, 1))
+    b.updateBoardFast(WHITE, b.getVertex(2, 2))
+    b.updateBoardFast(BLACK, b.getVertex(3, 2))
+    b.updateBoardFast(BLACK, b.getVertex(0, 3))
+    b.updateBoardFast(WHITE, b.getVertex(2, 3))
+    b.updateBoardFast(WHITE, b.getVertex(2, 4))
+    b
+  }
 }
