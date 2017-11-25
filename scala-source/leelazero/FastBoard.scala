@@ -206,7 +206,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
   }
 
   def isSuicide(vertex: Short, color: Short): Boolean = {
-    if (countPliberties(vertex) > 0) return false
+    if (countPseudoLiberties(vertex) > 0) return false
 
     var connecting = false
 
@@ -245,13 +245,29 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     }
 
     removeNeighbor(vertex, color)
-
     if (!connecting) opps_live else opps_live && ours_die
   }
 
-  private def countPliberties(vertex: Short): Short = {
+  /**
+    * Count all neighboring empty cells to a group as a liberty.
+    * When placing stones adjacent to that group, add one pseudo liberty for neighboring empty cells,
+    * and remove one pseudo liberty for each neighboring group.
+    * There may be duplicate pseudo liberties with certain "bent" shapes.
+    * However, the test for 0 liberties remains correct, and there is also a simple "atari" check.
+    * @return number of pseudo liberties
+    */
+  private def countPseudoLiberties(vertex: Short): Short = {
     countNeighbors(EMPTY, vertex)
   }
+
+  /**
+    * Actual liberties of the group. Probably implemented using union-find (need to verify).
+    * The difference is speed, pseudo liberties have O(1) adding and removal,
+    * and real liberties have the inverse Ackermann function for that,
+    * but in practice there is a significant speed difference.
+    * @return number of real liberties
+    */
+  def countRealLiberties(vertex: Int): Int = liberties(parent(vertex))
 
   /**
     * @return Count of neighbors of color c at vertex v.
@@ -666,7 +682,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     square(vertex) = color.toByte
     next(vertex) = vertex
     parent(vertex) = vertex
-    liberties(vertex) = countPliberties(vertex)
+    liberties(vertex) = countPseudoLiberties(vertex)
     stones(vertex) = 1
     totalStones(color) += 1
 
@@ -867,7 +883,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     var pos = vertex
 
     do {
-      if (countPliberties(pos) > 0) {
+      if (countPseudoLiberties(pos) > 0) {
         for (k <- 0 until 4) {
           val ai = pos + directions(k)
           if (square(ai) == EMPTY) {
@@ -905,8 +921,6 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     assert(square(vertex) == WHITE || square(vertex) == BLACK)
     stones(parent(vertex))
   }
-
-  def countRLiberties(vertex: Int): Int = liberties(parent(vertex))
 
   def mergedStringSize(color: Short, vertex: Int): Int = {
     var totalSize = 0
