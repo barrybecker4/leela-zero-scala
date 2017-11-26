@@ -3,6 +3,7 @@ package leelazero
 import leelazero.FastBoard.{BLACK, WHITE}
 import leelazero.TestUtil.clean
 import org.scalatest.FunSuite
+import FastBoardSerializer._
 
 class FastBoardSerializerSuite extends FunSuite {
 
@@ -124,6 +125,34 @@ class FastBoardSerializerSuite extends FunSuite {
        |   a b c d e f g h j k l m n
        |
        |""")) { fbs.serialize() }
+  }
+
+  test("moveToText") {
+    val b = createFilled3x3Board()
+    val fbs = new FastBoardSerializer(b)
+    assertResult("B1") { fbs.moveToText(b.getVertex(1, 0)) }
+    assertResult("A2") { fbs.moveToText(b.getVertex(0, 1)) }
+    assertResult("pass") { fbs.moveToText(PASS) }
+    assertResult("resign") { fbs.moveToText(RESIGN) }
+  }
+
+  test("textToMove") {
+    val b = createFilled3x3Board()
+    val fbs = new FastBoardSerializer(b)
+    assertResult(b.getVertex(1, 0)) { fbs.textToMove("B1") }
+    assertResult(b.getVertex(0, 1)) { fbs.textToMove("A2") }
+    assertResult(PASS) { fbs.textToMove("pass") }
+    assertResult(RESIGN) { fbs.textToMove("resign") }
+  }
+
+  test("moveToTextSgf") {
+    val b = createFilled3x3Board()
+    val fbs = new FastBoardSerializer(b)
+    assertResult("bc") { fbs.moveToTextSgf(b.getVertex(1, 0)) }
+    assertResult("ab") { fbs.moveToTextSgf(b.getVertex(0, 1)) }
+    assertResult("ca") { fbs.moveToTextSgf(b.getVertex(2, 2)) }
+    assertResult("tt") { fbs.moveToTextSgf(PASS) }
+    assertResult("tt") { fbs.moveToTextSgf(RESIGN) }
   }
 
   /**

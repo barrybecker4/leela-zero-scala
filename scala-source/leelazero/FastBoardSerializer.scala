@@ -1,6 +1,17 @@
 package leelazero
 
 import leelazero.FastBoard.{BLACK, WHITE}
+import FastBoardSerializer._
+
+
+object FastBoardSerializer {
+
+  /** vertex of a pass */
+  val PASS: Short   = -1
+
+  /**  vertex of a "resign move" */
+  val RESIGN: Short = -2
+}
 
 /** Used to serialize a FastBoard in different ways */
 class FastBoardSerializer(board: FastBoard) {
@@ -91,6 +102,75 @@ class FastBoardSerializer(board: FastBoard) {
     res
   }
 
+  def textToMove(move: String): Int = {
+    if (move.length == 0 || move == "pass") {
+      return PASS
+    }
+    if (move == "resign") {
+      return RESIGN
+    }
+
+    val c1 = move(0).toLower
+    var x: Int = c1 - 'a'
+    // There is no i in ...
+    assert(x != 8)
+    if (x > 8) x -= 1
+    val remainder = move.substring(1)
+    val y: Int = remainder.toInt - 1
+    board.getVertex(x, y)
+  }
+
+  /** @return the string coordinate (like A2) corresponding to the integer vertex position. */
+  def moveToText(move: Short): String = {
+    val (row, column) = getCoord(move)
+    var result = ""
+
+    if (board.validVertex(move)) {
+      result += (if (column < 8) ('A' + column).toChar else ('A' + column + 1).toChar)
+      result += (row + 1)
+    } else if (move == PASS) {
+      result += "pass"
+    } else if (move == RESIGN) {
+      result += "resign"
+    } else {
+      result += "error"
+    }
+    result
+  }
+
+  def moveToTextSgf(move: Short): String = {
+    var (row, column) = getCoord(move)
+
+    // SGF inverts rows
+    row = board.getBoardSize - row - 1
+    var result = ""
+
+    if (board.validVertex(move)) {
+      if (column <= 25) {
+        result += ('a' + column).toChar
+      } else {
+        result  += ('A' + column - 26).toChar
+      }
+      if (row <= 25) {
+        result += ('a' + row).toChar
+      } else {
+        result += ('A' + row - 26).toChar
+      }
+    }
+    else if (move == PASS || move == RESIGN) { result += "tt" }
+    else { result += "error" }
+    result
+  }
+
+  private def getCoord(move: Int): (Int, Int) = {
+    val size = board.getBoardSize
+    val column = move % (size + 2) - 1
+    val row = move / (size + 2) - 1
+    assert(move == PASS || move == RESIGN || (row >= 0 && row < size))
+    assert(move == PASS || move == RESIGN || (column >= 0 && column < size))
+    (row , column)
+  }
+
   private def createColumnLabels(padding: String = " "): String = {
     var result = ""
     for (i <- 0 until board.getBoardSize) {
@@ -104,9 +184,8 @@ class FastBoardSerializer(board: FastBoard) {
   }
 
   /** @return true if the specified position is a star point */
-  def starPoint(size: Short, x: Int, y: Int): Boolean = starPoint(size, y * size + x)
-
-  def starPoint(size: Short, point: Int): Boolean = {
+  private def starPoint(size: Short, x: Int, y: Int): Boolean = starPoint(size, y * size + x)
+  private def starPoint(size: Short, point: Int): Boolean = {
     val stars = Array.ofDim[Int](3)
     val points = Array.ofDim[Int](2)
     var hits = 0
@@ -129,7 +208,6 @@ class FastBoardSerializer(board: FastBoard) {
         }
       }
     }
-
     hits >= 2
   }
 }

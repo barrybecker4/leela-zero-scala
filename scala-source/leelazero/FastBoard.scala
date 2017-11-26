@@ -17,12 +17,6 @@ object FastBoard {
   /** infinite score */
   val BIG = 10000000
 
-  /** vertex of a pass */
-  val PASS: Short   = -1
-
-  /**  vertex of a "resign move" */
-  val RESIGN: Short = -2
-
   /** possible contents of a square */    // square_t
   val BLACK: Byte = 0
   val WHITE: Byte = 1
@@ -37,8 +31,6 @@ object FastBoard {
     (4 * (1 << (NBR_SHIFT * BLACK))).toShort,
     (4 * (1 << (NBR_SHIFT * WHITE))).toShort
   )
-
-  val CINVERT = Array(WHITE, BLACK, EMPTY, INVALID) // s_cinvert
 }
 
 /**
@@ -52,16 +44,16 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
   private var square: Array[Byte] = _    // Board contents
   private var next: Array[Short] = _     // next stone in string
   private var parentString: Array[Short] = _  // parent string of vertex
-  private var stringLiberties: Array[Int] = _  // liberties per string parent
-  private var stonesInString: Array[Int] = _   // stones per string parent
-  private var neighbors: Array[Int] = _  // counts of neighboring stones
+  private var stringLiberties: Array[Int] = _ // liberties per string parent
+  private var stonesInString: Array[Int] = _  // stones per string parent
+  private var neighbors: Array[Int] = _       // counts of neighboring stones
   private var directions: Array[Int] = _      // movement in 4 directions
   private var extraDirections: Array[Int] = _ // movement in 8 directions
   private var prisoners: Array[Int] = _     // prisoners per color
   private var totalStones: Array[Int] = _   // total stones per color
   private var critical: Seq[Short] = Seq()  // queue of critical points  (use dropRight to pop)
   private var emptySquare: Array[Short] = _ // empty squares
-  private var emptyIdx: Array[Int] = _  // indices of empty squares
+  private var emptyIdx: Array[Int] = _      // indices of empty squares
   private var emptyCnt: Int = _
   private var toMove: Byte = _
   private var maxSq: Short = _
@@ -75,10 +67,11 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     assert(x >= 0 && x < boardSize, "x out of range: " + x)
     assert(y >= 0 && y < boardSize, "y out of range: " + y)
     val vertex: Short = (((y + 1) * (boardSize + 2)) + (x + 1)).toShort
-    assert(vertex >= 0 && vertex < maxSq)
+    assert(validVertex(vertex))
     vertex
   }
 
+  def validVertex(vertex: Short): Boolean = vertex >= 0 && vertex < maxSq
   def getVertex(x: Int, y: Int): Short = getVertex(x.toShort, y.toShort)
 
   /** @return the x,y coordinate from the 1D index */
@@ -92,13 +85,13 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     (x, y)
   }
 
-  def getSquare(vertex: Int): Byte = {
-    assert(vertex >= 0 && vertex < maxSq)
+  def getSquare(vertex: Short): Byte = {
+    assert(validVertex(vertex))
     square(vertex)
   }
 
-  def setSquare(vertex: Int, content: Byte): Unit = {
-    assert(vertex >= 0 && vertex < maxSq)
+  def setSquare(vertex: Short, content: Byte): Unit = {
+    assert(validVertex(vertex))
     assert(content >= BLACK && content <= INVALID)
     square(vertex) = content
   }
@@ -216,12 +209,12 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     var connecting = false
 
     for (k <- 0 until 4) {
-      val ai = vertex + directions(k)
+      val ai = (vertex + directions(k)).toShort
 
       val libs = countStringLiberties(ai)
       if (getSquare(ai) == color) {
         if (libs > 1) {
-          return false // connecting to live group = never suicide
+          return false // connecting to live group is never suicide
         }
         connecting = true
       } else {
@@ -236,7 +229,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     var ours_die = true
 
     for (k <- 0 until 4) {
-      val ai = vertex + directions(k)
+      val ai = (vertex + directions(k)).toShort
       val libs = countStringLiberties(ai)
 
       if (libs == 0 && getSquare(ai) != color) {
@@ -433,24 +426,6 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     true
   }
 
-  def textToMove(move: String): Int = {
-    if (move.length == 0 || move == "pass") {
-      return PASS
-    }
-    if (move == "resign") {
-      return RESIGN
-    }
-
-    val c1 = move(0).toLower
-    var x: Int = c1 - 'a'
-    // There is no i in ...
-    assert(x != 8)
-    if (x > 8) x -= 1
-    val remainder = move.substring(1)
-    val y: Int = remainder.toInt - 1
-    getVertex(x, y)
-  }
-
   def getPrisoners(side: Short): Int = {
     assert(side == WHITE || side == BLACK)
     prisoners(side)
@@ -468,10 +443,24 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     parent
   }
 
-  def getStringStones(vertex: Short): Seq[Int] = getStringAs[Int](vertex, identity)
-  def getString(vertex: Short): String = getStringAs[String](vertex, moveToText).mkString(" ")
+  def getStringStones(vertex: Short): Seq[Int] = getStringAs[Int](vertex, identity[Short])
+  def getString(vertex: Short): String = getStringAs[String](vertex, fbs.moveToText).mkString(" ")
 
-  private def getStringAs[T](vertex: Short, func: Int => T): Seq[T] = {
+  def getStoneList: String = {
+    var res: String = ""
+
+    for (i <- 0 until boardSize) {
+      for (j <- 0 until boardSize) {
+        val vertex = getVertex(i, j)
+        if (getSquare(vertex) != EMPTY) {
+          res += fbs.moveToText(vertex) + " "
+        }
+      }
+    }
+    res.trim // remove final space
+  }
+
+  private def getStringAs[T](vertex: Short, func: Short => T): Seq[T] = {
     val start = parentString(vertex)
     var res: Seq[T] = Seq()
     var newPos = start
@@ -519,23 +508,8 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
   def getDir(idx: Int): Int = directions(idx)
   def getExtraDir(idx: Int): Int = extraDirections(idx)
 
-  def getStoneList: String = {
-    var res: String = ""
-
-    for (i <- 0 until boardSize) {
-      for (j <- 0 until boardSize) {
-        val vertex: Int = getVertex(i, j)
-
-        if (getSquare(vertex) != EMPTY) {
-          res += moveToText(vertex) + " "
-        }
-      }
-    }
-    res.trim // remove final space
-  }
-
   def stringSize(vertex: Short): Int = {
-    assert(vertex > 0 && vertex < maxSq)
+    assert(validVertex(vertex))
     assert(isOccupied(vertex))
     stonesInString(parentString(vertex))
   }
@@ -549,7 +523,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     for (k <- 0 until 4) {
       val ai = vertex + directions(k)
 
-      if (getSquare(ai) == color) {
+      if (getSquare(ai.toShort) == color) {
         val theParent = parentString(ai)
 
         var found = false
@@ -569,51 +543,6 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
       }
     }
     totalSize
-  }
-
-  // move to fbs
-  def moveToText(move: Int): String = {
-    val (row, column) = getCoord(move)
-    var result = ""
-
-    if (move >= 0 && move <= maxSq) {
-      result += (if (column < 8) ('A' + column).toChar else ('A' + column + 1).toChar)
-      result += (row + 1)
-    } else if (move == PASS) {
-      result += "pass"
-    } else if (move == RESIGN) {
-      result += "resign"
-    } else {
-      result += "error"
-    }
-
-    result
-  }
-
-  // move to fbs
-  def moveToTextSgf(move: Int): String = {
-    var (row, column) = getCoord(move)
-
-    // SGF inverts rows
-    row = boardSize - row - 1
-    var result = ""
-
-    if (move >= 0 && move <= maxSq) {
-      if (column <= 25) {
-        result += ('a' + column)
-      } else {
-        result  += ('A' + column - 26)
-      }
-      if (row <= 25) {
-        result += ('a' + row)
-      } else {
-        result += ('A' + row - 26)
-      }
-    }
-    else if (move == PASS) { result += "tt" }
-    else if (move == RESIGN) { result += "tt" }
-    else { result += "error" }
-    result
   }
 
   private def addNeighbor(vertex: Short, color: Short): Unit = {
@@ -817,12 +746,4 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
 
   /** @return true if the vertex is occupied with a black or white stone */
   private def isOccupied(vertex: Short): Boolean = square(vertex) < EMPTY
-
-  private def getCoord(move: Int): (Int, Int) = {
-    val column = move % (boardSize + 2) - 1
-    val row = move / (boardSize + 2) - 1
-    assert(move == PASS || move == RESIGN || (row >= 0 && row < boardSize))
-    assert(move == PASS || move == RESIGN || (column >= 0 && column < boardSize))
-    (row , column)
-  }
 }
