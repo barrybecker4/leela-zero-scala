@@ -12,8 +12,10 @@ object Utils {
     if (!cfgQuiet) {
       System.err.println(string)
       if (cfgLogFileHandle.nonEmpty) {
-        //std::lock_guard<std::mutex> lock(IOmutex)  ??
-        cfgLogFileHandle.get.write(string.getBytes())
+        this.synchronized {
+          //std::lock_guard<std::mutex> lock(IOmutex)  ??
+          cfgLogFileHandle.get.write(string.getBytes())
+        }
       }
     }
   }
@@ -24,10 +26,12 @@ object Utils {
     println(string + "\n")
 
     if (cfgLogFileHandle.nonEmpty) {
-      val handle = cfgLogFileHandle.get
-      //std::lock_guard<std::mutex> lock(IOmutex)
-      handle.write(idText.getBytes)
-      handle.write((string + "\n").getBytes)
+      this.synchronized {
+        val handle = cfgLogFileHandle.get
+        //std::lock_guard<std::mutex> lock(IOmutex)
+        handle.write(idText.getBytes)
+        handle.write((string + "\n").getBytes)
+      }
     }
   }
 
@@ -37,17 +41,21 @@ object Utils {
     println(string + "\n")
 
     if (cfgLogFileHandle.nonEmpty) {
-      val handle = cfgLogFileHandle.get
-      //std::lock_guard<std::mutex> lock(IOmutex)
-      handle.write(idText.getBytes)
-      handle.write((string + "\n").getBytes)
+      this.synchronized {
+        val handle = cfgLogFileHandle.get
+        //std::lock_guard<std::mutex> lock(IOmutex)
+        handle.write(idText.getBytes)
+        handle.write((string + "\n").getBytes)
+      }
     }
   }
 
   def logInput(input: String): Unit = {
     if (cfgLogFileHandle.nonEmpty) {
-      //std::lock_guard<std::mutex> lock(IOmutex) ??
-      cfgLogFileHandle.get.write(s">>$input".getBytes())
+      this.synchronized {
+        //std::lock_guard<std::mutex> lock(IOmutex) ??
+        cfgLogFileHandle.get.write(s">>$input".getBytes())
+      }
     }
   }
 }
