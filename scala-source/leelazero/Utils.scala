@@ -6,14 +6,14 @@ import java.io.OutputStream
 object Utils {
 
   val cfgQuiet = false // Move to GTP once that class is ported
-  val cfgLogFileHandle: Option[OutputStream] = None // Move to GTP once that class is ported
+  var cfgLogFileHandle: Option[OutputStream] = None // Move to GTP once that class is ported
 
   def myPrint(string: String): Unit = {
     if (!cfgQuiet) {
       System.err.println(string)
       if (cfgLogFileHandle.nonEmpty) {
         //std::lock_guard<std::mutex> lock(IOmutex)  ??
-        println(cfgLogFileHandle.get, string)
+        cfgLogFileHandle.get.write(string.getBytes())
       }
     }
   }
@@ -26,8 +26,8 @@ object Utils {
     if (cfgLogFileHandle.nonEmpty) {
       val handle = cfgLogFileHandle.get
       //std::lock_guard<std::mutex> lock(IOmutex)
-      print(handle, idText)
-      print(handle, string + "\n")
+      handle.write(idText.getBytes)
+      handle.write((string + "\n").getBytes)
     }
   }
 
@@ -39,15 +39,15 @@ object Utils {
     if (cfgLogFileHandle.nonEmpty) {
       val handle = cfgLogFileHandle.get
       //std::lock_guard<std::mutex> lock(IOmutex)
-      print(handle, idText)
-      print(handle, string + "\n")
+      handle.write(idText.getBytes)
+      handle.write((string + "\n").getBytes)
     }
   }
 
   def logInput(input: String): Unit = {
     if (cfgLogFileHandle.nonEmpty) {
       //std::lock_guard<std::mutex> lock(IOmutex) ??
-      println(cfgLogFileHandle.get, s">>$input")
+      cfgLogFileHandle.get.write(s">>$input".getBytes())
     }
   }
 }
