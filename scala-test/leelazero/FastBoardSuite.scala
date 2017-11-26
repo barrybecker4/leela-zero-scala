@@ -301,6 +301,45 @@ class FastBoardSuite extends FunSuite {
     assertResult("31 23 32 38 24") {b.getStringStones(b.getVertex(2, 2)).mkString(" ")}
   }
 
+  test("fastIsAtari") {
+    val b = createInAtari5x5Board()
+    println(b)
+    assertResult(true) { b.fastInAtari(b.getVertex(1, 1)) }
+    assertResult(false) { b.fastInAtari(b.getVertex(2, 3)) }
+    assertResult(true) { b.fastInAtari(b.getVertex(3, 1)) }
+  }
+
+  test("inAtari") {
+    val b = createInAtari5x5Board()
+    assertResult(10) { b.inAtari(b.getVertex(1, 1))}
+    assertResult(0) { b.inAtari(b.getVertex(3, 2))}
+    assertResult(0) { b.inAtari(b.getVertex(2, 3))}
+    assertResult(12) { b.inAtari(b.getVertex(3, 1))}
+  }
+
+  test("getDir") {
+    val b = createFilled5x5Board()
+    assertResult(-7) { b.getDir(0)}
+    assertResult(1) { b.getDir(1)}
+    assertResult(7) { b.getDir(2)}
+    assertResult(-1) { b.getDir(3)}
+  }
+
+  test("getStoneList of empty 5x5") {
+    val b = new FastBoard(5)
+    assertResult("") { b.getStoneList}
+  }
+
+  test("getStoneList all white") {
+    val b = create5x5AllWhiteField()
+    assertResult("A3 B3 C1 C2 C3 C4 C5 D3 D5 E4") { b.getStoneList}
+  }
+
+  test("getStoneList filled") {
+    val b = createFilled5x5Board()
+    assertResult("A1 A3 A4 B1 B2 B3 C2 C3 C4 C5 D1 D2 D3 D4 E4 E5") { b.getStoneList}
+  }
+
   /**
          a b c d e
        5 . . O O .  5
@@ -399,6 +438,34 @@ class FastBoardSuite extends FunSuite {
     b.updateBoardFast(0, 0, WHITE)
     b.updateBoardFast(1, 0, BLACK)
     b.updateBoardFast(3, 0, BLACK)
+    b
+  }
+
+  /**
+        a b c d e
+      5 . . O . .  5
+      4 X . O . .  4
+      3 . O O X X  3
+      2 O X X O O  2
+      1 . O . X .  1
+        a b c d e
+    */
+  private def createInAtari5x5Board(): FastBoard = {
+    val b = new FastBoard(5)
+    b.updateBoardFast(1, 1, BLACK)
+    b.updateBoardFast(2, 1, BLACK)
+    b.updateBoardFast(3, 1, WHITE)
+    b.updateBoardFast(0, 1, WHITE)
+    b.updateBoardFast(4, 2, BLACK)
+    b.updateBoardFast(1, 0, WHITE)
+    b.updateBoardFast(3, 0, BLACK)
+    b.updateBoardFast(1, 2, WHITE)
+    b.updateBoardFast(4, 1, WHITE)
+    b.updateBoardFast(2, 2, WHITE)
+    b.updateBoardFast(3, 2, BLACK)
+    b.updateBoardFast(0, 3, BLACK)
+    b.updateBoardFast(2, 3, WHITE)
+    b.updateBoardFast(2, 4, WHITE)
     b
   }
 }

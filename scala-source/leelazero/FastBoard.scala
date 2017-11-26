@@ -461,8 +461,8 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
   def setToMove(tomove: Byte): Unit = { toMove = tomove }
 
   /** @return the id of the parent string */
-  def getParentString(vertex: Int): Short = {
-    assert(square(vertex) == WHITE || square(vertex) == BLACK)
+  def getParentString(vertex: Short): Short = {
+    assert(isOccupied(vertex))
     val parent = parentString(vertex)
     assert(parent == parentString(parent))
     parent
@@ -484,26 +484,23 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     res
   }
 
-  def fastInAtari(vertex: Int): Boolean = {
-    assert((square(vertex) < EMPTY) || (countStringLiberties(vertex) > maxSq))
+  /** @return true if the vertex belongs to a string that is in atari */
+  def fastInAtari(vertex: Short): Boolean = {
+    assert(isOccupied(vertex) || countStringLiberties(vertex) > maxSq)
     val theParent = parentString(vertex)
     stringLiberties(theParent) == 1
   }
 
   /**
     * @param vertex the vertex to check if in atari
-    * @return 0 if not in atari, position of single liberty if it is
+    * @return the vertex which will capture this string, if there is one; else return 0 if not in atari.
     */
   def inAtari(vertex: Short): Int = {
-    assert(square(vertex) < EMPTY)
-
-    if (countStringLiberties(vertex) > 1) {
-      return 0
-    }
-
-    assert(countStringLiberties(vertex) == 1)
+    assert(isOccupied(vertex))
+    val stringLibs = countStringLiberties(vertex)
+    if (stringLibs > 1) return 0
+    assert(stringLibs == 1) // must be in atari, otherwise it would have been captured already
     var pos = vertex
-
     do {
       if (countPointLiberties(pos) > 0) {
         for (k <- 0 until 4) {
@@ -513,15 +510,14 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
           }
         }
       }
-
       pos = next(pos)
     } while (pos != vertex)
-    assert(false)  // should be unreachable
-    0
+    assert(false)
+    0  // unreachable
   }
 
-  def getDir(vertex: Int): Int = directions(vertex)
-  def getExtraDir(vertex: Int): Int = extraDirections(vertex)
+  def getDir(idx: Int): Int = directions(idx)
+  def getExtraDir(idx: Int): Int = extraDirections(idx)
 
   def getStoneList: String = {
     var res: String = ""
@@ -535,12 +531,12 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
         }
       }
     }
-    res.substring(0, res.length - 1) // remove final space
+    res.trim // remove final space
   }
 
-  def stringSize(vertex: Int): Int = {
+  def stringSize(vertex: Short): Int = {
     assert(vertex > 0 && vertex < maxSq)
-    assert(square(vertex) == WHITE || square(vertex) == BLACK)
+    assert(isOccupied(vertex))
     stonesInString(parentString(vertex))
   }
 
@@ -565,7 +561,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
         }
 
         if (!found) {
-          totalSize += stringSize(ai)
+          totalSize += stringSize(ai.toShort)
           nbrParent(nbrCount) = theParent
           nbrCount += 1
         }
@@ -817,6 +813,9 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     }
     -1
   }
+
+  /** @return true if the vertex is occupied with a black or white stone */
+  private def isOccupied(vertex: Short): Boolean = square(vertex) < EMPTY
 
   private def getCoord(move: Int): (Int, Int) = {
     val column = move % (boardSize + 2) - 1
