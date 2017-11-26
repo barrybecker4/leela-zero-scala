@@ -540,6 +540,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     stonesInString(parentString(vertex))
   }
 
+  /** @return number of stones in the string that is created by placing the specified stone, excluding that stone */
   def mergedStringSize(color: Short, vertex: Int): Int = {
     var totalSize = 0
     val nbrParent = Array.ofDim[Int](4)

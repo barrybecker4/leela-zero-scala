@@ -4,6 +4,7 @@ import org.scalatest.FunSuite
 import FastBoard._
 import TestUtil._
 
+
 class FastBoardSuite extends FunSuite {
 
   test("Create an empty 3x3 board") {
@@ -338,6 +339,32 @@ class FastBoardSuite extends FunSuite {
   test("getStoneList filled") {
     val b = createFilled5x5Board()
     assertResult("A1 A3 A4 B1 B2 B3 C2 C3 C4 C5 D1 D2 D3 D4 E4 E5") { b.getStoneList}
+  }
+
+  test("stringSize") {
+    val b = createFilled5x5Board()
+    assertResult(3) { b.stringSize(b.getVertex(1, 1))}
+    assertResult(1) { b.stringSize(b.getVertex(3, 2))}
+    assertResult(5) { b.stringSize(b.getVertex(2, 3))}
+    assertResult(1) { b.stringSize(b.getVertex(3, 1))}
+    assertThrows[AssertionError] {
+      b.stringSize(b.getVertex(1, 3))
+    }
+  }
+
+  test("mergedStringSize") {
+    val b = createFilled5x5Board()
+    assertResult(3) { b.mergedStringSize(BLACK, b.getVertex(1, 1))}
+    assertResult(5) { b.mergedStringSize(WHITE, b.getVertex(1, 1))}
+
+    assertResult(2) { b.mergedStringSize(BLACK, b.getVertex(0, 2))}
+    assertResult(5) { b.mergedStringSize(WHITE, b.getVertex(0, 2))}
+
+    assertResult(4) { b.mergedStringSize(BLACK, b.getVertex(2, 0))}
+    assertResult(0) { b.mergedStringSize(WHITE, b.getVertex(2, 0))}
+
+    assertResult(2) { b.mergedStringSize(BLACK, b.getVertex(1, 3)) }
+    assertResult(5) { b.mergedStringSize(WHITE, b.getVertex(1, 3)) }
   }
 
   /**
