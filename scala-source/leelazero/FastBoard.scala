@@ -31,6 +31,8 @@ object FastBoard {
     (4 * (1 << (NBR_SHIFT * BLACK))).toShort,
     (4 * (1 << (NBR_SHIFT * WHITE))).toShort
   )
+
+  def calcMaxSquare(size: Short): Short = ((size + 2) * (size + 2)).toShort
 }
 
 /**
@@ -126,7 +128,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
   def resetBoard(size: Short): Unit = {
     assert(size <= MAX_BOARD_SIZE)
     boardSize = size
-    maxSq = ((size + 2) * (size + 2)).toShort
+    maxSq = calcMaxSquare(size)
 
     square = Array.ofDim[Byte](maxSq)
     next = Array.ofDim[Short](maxSq + 1)
