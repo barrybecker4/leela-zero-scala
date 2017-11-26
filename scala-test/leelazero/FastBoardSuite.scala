@@ -289,6 +289,17 @@ class FastBoardSuite extends FunSuite {
     }
   }
 
+  test("getString as string") {
+    val b = createFilled5x5Board()
+    assertResult("C2 B1 B2") {b.getString(b.getVertex(1, 1))}
+    assertResult("C4 B3 D4 C5 C3") {b.getString(b.getVertex(2, 2))}
+  }
+
+  test("getString stones") {
+    val b = createFilled5x5Board()
+    assertResult("17 9 16") {b.getStringStones(b.getVertex(1, 1)).mkString(" ")}
+    assertResult("31 23 32 38 24") {b.getStringStones(b.getVertex(2, 2)).mkString(" ")}
+  }
 
   /**
          a b c d e

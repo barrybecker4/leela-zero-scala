@@ -468,32 +468,20 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     parent
   }
 
-  def getStringStones(vertex: Int): Seq[Int] = {
+  def getStringStones(vertex: Short): Seq[Int] = getStringAs[Int](vertex, identity)
+  def getString(vertex: Short): String = getStringAs[String](vertex, moveToText).mkString(" ")
+
+  private def getStringAs[T](vertex: Short, func: Int => T): Seq[T] = {
     val start = parentString(vertex)
-    var res: Seq[Int] = Seq() //Array.ofDim(stones(start))
-    var newpos = start
+    var res: Seq[T] = Seq()
+    var newPos = start
 
     do {
-      assert(square(newpos) == square(vertex))
-      res :+= newpos.toInt
-      newpos = next(newpos)
-    } while (newpos != start)
+      assert(square(newPos) == square(vertex))
+      res :+= func(newPos)
+      newPos = next(newPos)
+    } while (newPos != start)
     res
-  }
-
-  // reimplement this in terms of getStringStones
-  def getString(vertex: Int): String = {
-    var result: String = ""
-    val start = parentString(vertex)
-    var newpos = start
-
-    do {
-      assert(square(newpos) == square(vertex))
-      result += moveToText(newpos) + " "
-      newpos = next(newpos)
-    } while (newpos != start)
-
-    result.substring(0, result.length - 1) // remove last space
   }
 
   def fastInAtari(vertex: Int): Boolean = {
@@ -592,7 +580,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     var result = ""
 
     if (move >= 0 && move <= maxSq) {
-      result += (if (column < 8) 'A' + column else 'A' + column + 1)
+      result += (if (column < 8) ('A' + column).toChar else ('A' + column + 1).toChar)
       result += (row + 1)
     } else if (move == PASS) {
       result += "pass"
@@ -758,12 +746,12 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
   private def mergeStrings(ip: Short, aip: Short): Unit = {
     assert(ip != maxSq && aip != maxSq)
     stonesInString(ip) += stonesInString(aip) // merge stones
-    var newpos = aip              // loop over stones, update parents
+    var newPos = aip              // loop over stones, update parents
 
     do {
       // check if this stone has a liberty
       for (k <- 0 until 4) {
-        val ai = newpos + directions(k)
+        val ai = newPos + directions(k)
         // for each liberty, check if it is not shared
         if (square(ai) == EMPTY) {
           // find liberty neighbors
@@ -777,14 +765,13 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
             }
             kk += 1
           }
-
           if (!found) stringLiberties(ip) += 1
         }
       }
 
-      parentString(newpos) = ip
-      newpos = next(newpos)
-    } while (newpos != aip)
+      parentString(newPos) = ip
+      newPos = next(newPos)
+    } while (newPos != aip)
 
     // merge strings
     val tmp = next(aip)
@@ -832,8 +819,8 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
   }
 
   private def getCoord(move: Int): (Int, Int) = {
-    var column = move % (boardSize + 2) - 1
-    var row = move / (boardSize + 2) - 1
+    val column = move % (boardSize + 2) - 1
+    val row = move / (boardSize + 2) - 1
     assert(move == PASS || move == RESIGN || (row >= 0 && row < boardSize))
     assert(move == PASS || move == RESIGN || (column >= 0 && column < boardSize))
     (row , column)
