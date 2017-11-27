@@ -11,7 +11,7 @@ object FastBoard {
   /** largest board supported */
   val MAX_BOARD_SIZE: Short = 19
 
-  /** highest existing square */
+  /** highest existing square. Indicates that an empty square is never in atari. Large value that fits in a short. */
   val MAX_LIBS: Short =  16384  // 2^14
 
   /** infinite score */
@@ -23,8 +23,8 @@ object FastBoard {
   val EMPTY: Byte = 2
   val INVALID: Byte = 3
 
-  type Point = Tuple2[Short, Short]
-  type MoveScore = Tuple2[Short, Float]    // movescore_t
+  type Point = (Short, Short)
+  type MoveScore = (Short, Float)    // movescore_t
 
   /**  bit masks to detect eyes on neighbors */
   val EYE_MASK: Array[Short] = Array(        // s_eyemask
@@ -46,7 +46,13 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
   private var square: Array[Byte] = _    // Board contents
   private var next: Array[Short] = _     // next stone in string
   private var parentString: Array[Short] = _  // parent string of vertex
-  private var stringLiberties: Array[Int] = _ // liberties per string parent
+
+  /**
+    * Liberties for the string that contains the specified vertex.
+    * It's the number of liberties for the string of which the index is the "parent" vertex,
+    * and only guaranteed to be correct for that parent vertex.
+    */
+  private var stringLiberties: Array[Int] = _
   private var stonesInString: Array[Int] = _  // stones per string parent
   private var neighbors: Array[Int] = _       // counts of neighboring stones
   private var directions: Array[Int] = _      // movement in 4 directions
@@ -206,7 +212,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
 
   /** @return true if placing the specified colored stone at the specified position would be suicide */
   def isSuicide(vertex: Short, color: Short): Boolean = {
-    if (countPointLiberties(vertex) > 0) return false
+    if (countPseudoLiberties(vertex) > 0) return false
 
     var connecting = false
 
@@ -246,14 +252,14 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
   }
 
   /**
-    * Count all neighboring empty cells to a group as a liberty.
+    * Liberties on a single point - called pseudo liberties.
     * When placing stones adjacent to that group, add one pseudo liberty for neighboring empty cells,
     * and remove one pseudo liberty for each neighboring group.
     * There may be duplicate pseudo liberties with certain "bent" shapes.
     * However, the test for 0 liberties remains correct, and there is also a simple "atari" check.
     * @return number of pseudo liberties
     */
-  private def countPointLiberties(vertex: Short): Short = {
+  private def countPseudoLiberties(vertex: Short): Short = {
     countNeighbors(EMPTY, vertex)
   }
 
@@ -360,7 +366,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     square(vertex) = color.toByte
     next(vertex) = vertex
     parentString(vertex) = vertex
-    stringLiberties(vertex) = countPointLiberties(vertex)
+    stringLiberties(vertex) = countPseudoLiberties(vertex)
     stonesInString(vertex) = 1
     totalStones(color) += 1
 
@@ -394,9 +400,9 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
 
     /* move last vertex in list to our position */
     emptyCnt -= 1
-    val lastvertex = emptySquare(emptyCnt)
-    emptyIdx(lastvertex) = emptyIdx(vertex)
-    emptySquare(emptyIdx(vertex)) = lastvertex
+    val lastVertex = emptySquare(emptyCnt)
+    emptyIdx(lastVertex) = emptyIdx(vertex)
+    emptySquare(emptyIdx(vertex)) = lastVertex
     assert(countStringLiberties(vertex) < boardSize * boardSize)
 
     /* check whether we still live (i.e. detect suicide) */
@@ -493,7 +499,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     assert(stringLibs == 1) // must be in atari, otherwise it would have been captured already
     var pos = vertex
     do {
-      if (countPointLiberties(pos) > 0) {
+      if (countPseudoLiberties(pos) > 0) {
         for (k <- 0 until 4) {
           val ai = pos + directions(k)
           if (square(ai) == EMPTY) {
@@ -604,6 +610,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     else if (color == WHITE) BLACK
     else throw new IllegalStateException("Unexpected color: " + color)
 
+  /** @return true if playing the specified single stone (ss) is suicidal. */
   private def fastSsSuicide(color: Short, vertex: Short): Boolean = {
     val eyePlay = neighbors(vertex) & EYE_MASK(otherColor(color))
 

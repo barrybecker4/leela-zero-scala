@@ -10,7 +10,11 @@ object Zobrist {
   RND.setSeed(0)
 }
 
-/** Zobrist Hash. See https://en.wikipedia.org/wiki/Zobrist_hashing */
+/**
+  * Zobrist Hash.
+  * See https://en.wikipedia.org/wiki/Zobrist_hashing
+  * See https://stackoverflow.com/questions/21212993/unsigned-variables-in-scala
+  */
 class Zobrist(size: Short) {
   private val maxSq: Short = calcMaxSquare(size)
 
