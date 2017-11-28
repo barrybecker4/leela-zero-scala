@@ -19,7 +19,7 @@ class Zobrist(size: Short) {
   private val maxSq: Short = calcMaxSquare(size)
 
   val zobrist: Array[Array[Long]] = Array.ofDim(4, maxSq)
-  val zobristPrisine: Array[Array[Long]] = Array.ofDim(2, 2 * maxSq)
+  val zobristPristine: Array[Array[Long]] = Array.ofDim(2, 2 * maxSq)
   val zobristPass: Array[Long] = Array.ofDim(5)
   init()
 
@@ -35,8 +35,8 @@ class Zobrist(size: Short) {
 
     for (i <- 0 until 2) {
       for (j <- 0 until 2 * maxSq) {
-        zobristPrisine(i)(j)  = nextR << 32
-        zobristPrisine(i)(j) ^= nextR
+        zobristPristine(i)(j)  = nextR << 32
+        zobristPristine(i)(j) ^= nextR
       }
     }
 

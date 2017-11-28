@@ -1,22 +1,36 @@
 package leelazero
 
 import FastBoard._
+import FullBoard._
+
+object FullBoard {
+  /** Initial Zobrist hash when computing hashes for board positions.
+    * Largest scala Long is 9223372036854775807. The 0x prefix indicates hexadecimal.
+    */
+  val INITIAL_HASH = 0x1234567887654321L
+}
 
 class FullBoard(size: Short = MAX_BOARD_SIZE) extends FastBoard(size) {
 
-  var hash: Long = _
-  var ko_hash: Long = _
-  val zobrist: Zobrist = new Zobrist(boardSize)
+  private var hash: Long = _
+  private var koHash: Long = _
+  private val zobrist: Zobrist = new Zobrist(boardSize)
 
+  def getHash: Long = hash
+  def getKoHash: Long = koHash
 
-  def removeString(i: Short): Short = {
-    var pos: Short = i
-    var removed: Short = 0
-    val color: Short = square(i)
+  /**
+    * Remove the string from the board that the specified position is part of.
+    * @return the number of stones in the string that was remvoed from the baord
+    */
+  def removeString(position: Short): Int = {
+    var pos: Short = position
+    var removed: Int = 0
+    val color: Short = square(position)
 
     do {
       hash ^= zobrist.zobrist(square(pos))(pos)
-      ko_hash ^= zobrist.zobrist(square(pos))(pos)
+      koHash ^= zobrist.zobrist(square(pos))(pos)
 
       square(pos) = EMPTY
       parentString(pos) = maxSq
@@ -29,192 +43,152 @@ class FullBoard(size: Short = MAX_BOARD_SIZE) extends FastBoard(size) {
       emptyCnt += 1
 
       hash ^= zobrist.zobrist(square(pos))(pos)
-      ko_hash ^= zobrist.zobrist(square(pos))(pos)
+      koHash ^= zobrist.zobrist(square(pos))(pos)
 
       removed += 1
       pos = next(pos)
-    } while (pos != i)
+    } while (pos != position)
     removed
   }
 
-}
+  /** @return Tromp-Taylor has positional superko value */
+  def calcKoHash(): Long = {
+    koHash = calcBaseHash()
+    koHash
+  }
 
-/*
+  /** @return zobrish has for current board state */
+  def calcHash(): Long = {
+    hash = incorporatePrisoners(calcBaseHash())
+    hash
+  }
 
+  def getRotatedHashes: Array[Long] = {
+    val result = Array.ofDim[Long](8)
 
-uint64 FullBoard::calc_ko_hash(void) {
-    uint64 res;
+    for (sym <- 0 until 8) {
+      var res = INITIAL_HASH
 
-#ifdef _WIN32
-    res = 0x1234567887654321UI64;
-#else
-    res = 0x1234567887654321ULL;
-#endif
-
-    for (int i = 0; i < m_maxsq; i++) {
-        if (m_square[i] != INVAL) {
-            res ^= Zobrist::zobrist[m_square[i]][i];
+      for (i <- 0 until maxSq) {
+        if (square(i) != INVALID) {
+          val newi = rotateVertex(i.toShort, sym)
+          res ^= zobrist.zobrist(square(i))(newi)
         }
+      }
+      result(sym) = incorporatePrisoners(res)
     }
+    result
+  }
 
-    ko_hash = res;
+  private def calcBaseHash(): Long = {
+    var res = INITIAL_HASH
 
-    /* Tromp-Taylor has positional superko */
-    return res;
-}
-
-uint64 FullBoard::calc_hash(void) {
-    uint64 res;
-
-#ifdef _WIN32
-    res = 0x1234567887654321UI64;
-#else
-    res = 0x1234567887654321ULL;
-#endif
-
-    for (int i = 0; i < m_maxsq; i++) {
-        if (m_square[i] != INVAL) {
-            res ^= Zobrist::zobrist[m_square[i]][i];
-        }
+    for (i <- 0 until maxSq) {
+      if (square(i) != INVALID)
+        res ^= zobrist.zobrist(square(i))(i)
     }
+    res
+  }
 
-    /* prisoner hashing is rule set dependent */
-    res ^= Zobrist::zobrist_pris[0][m_prisoners[0]];
-    res ^= Zobrist::zobrist_pris[1][m_prisoners[1]];
+  /** @return hash modified by current prisoners. Prisoner hashing is rule set dependent */
+  private def incorporatePrisoners(hash: Long): Long = {
+    var res = hash
+    res ^= zobrist.zobristPristine(0)(prisoners(0))
+    res ^= zobrist.zobristPristine(1)(prisoners(1))
+    if (toMove == BLACK)
+      res ^= 0xABCDABCDABCDABCDL
+    res
+  }
 
-    if (m_tomove == BLACK)
-#ifdef _WIN32
-        res ^= 0xABCDABCDABCDABCDUI64;
-#else
-        res ^= 0xABCDABCDABCDABCDULL;
-#endif
+  private def getCanonicalHash: Long = getRotatedHashes.min
 
-    hash = res;
+  /**
+    * Returns ko square or suicide tag. Does not update side to move.
+    * @param color player who placed a stone
+    * @param i position
+    * @return (ko square, capture) If no capture then return (-1, false)
+    */
+  def updateBoard(color: Short, i: Short): (Short, Boolean) = {
+    assert(square(i) == EMPTY)
 
-    return res;
-}
+    hash ^= zobrist.zobrist(square(i))(i)
+    koHash ^= zobrist.zobrist(square(i))(i)
 
-std::array<uint64, 8> FullBoard::get_rotated_hashes(void) {
-    std::array<uint64, 8> result;
+    square(i) = color.toByte
+    next(i) = i
+    parentString(i) = i
+    stringLiberties(i) = countPseudoLiberties(i)
+    stonesInString(i) = 1
+    totalStones(color) += 1
 
-    for (int sym = 0; sym < 8; sym++) {
-        uint64 res = 0x1234567887654321ULL;
-
-        for (int i = 0; i < m_maxsq; i++) {
-            if (m_square[i] != INVAL) {
-                int newi = rotate_vertex(i, sym);
-                res ^= Zobrist::zobrist[m_square[i]][newi];
-            }
-        }
-        /* prisoner hashing is rule set dependent */
-        res ^= Zobrist::zobrist_pris[0][m_prisoners[0]];
-        res ^= Zobrist::zobrist_pris[1][m_prisoners[1]];
-        if (m_tomove == BLACK)
-           res ^= 0xABCDABCDABCDABCDULL;
-        result[sym] = res;
-    }
-
-    return result;
-}
-
-uint64 FullBoard::get_canonical_hash(void) {
-    auto hashes = get_rotated_hashes();
-    return *std::min_element(hashes.cbegin(), hashes.cend());
-}
-
-uint64 FullBoard::get_hash(void) {
-    return hash;
-}
-
-uint64 FullBoard::get_ko_hash(void) {
-    return ko_hash;
-}
-
-int FullBoard::update_board(const int color, const int i, bool &capture) {
-    assert(m_square[i] == EMPTY);
-
-    hash ^= Zobrist::zobrist[m_square[i]][i];
-    ko_hash ^= Zobrist::zobrist[m_square[i]][i];
-
-    m_square[i] = (square_t)color;
-    m_next[i] = i;
-    m_parent[i] = i;
-    m_libs[i] = count_pliberties(i);
-    m_stones[i] = 1;
-    m_totalstones[color]++;
-
-    hash ^= Zobrist::zobrist[m_square[i]][i];
-    ko_hash ^= Zobrist::zobrist[m_square[i]][i];
+    hash ^= zobrist.zobrist(square(i))(i)
+    koHash ^= zobrist.zobrist(square(i))(i)
 
     /* update neighbor liberties (they all lose 1) */
-    add_neighbour(i, color);
+    addNeighbor(i, color)
 
     /* did we play into an opponent eye? */
-    int eyeplay = (m_neighbours[i] & s_eyemask[!color]);
+    val eyePlay = neighbors(i) & EYE_MASK(otherColor(color))
 
-    int captured_sq;
-    int captured_stones = 0;
+    var capturedSq: Short = 0
+    var capturedStones = 0
 
-    for (int k = 0; k < 4; k++) {
-        int ai = i + m_dirs[k];
+    for (k <- 0 until 4) {
+      val ai = (i + directions(k)).toShort
 
-        if (m_square[ai] == !color) {
-            if (m_libs[m_parent[ai]] <= 0) {
-                int this_captured = remove_string(ai);
-                captured_sq = ai;
-                captured_stones += this_captured;
-            }
-        } else if (m_square[ai] == color) {
-            int ip = m_parent[i];
-            int aip = m_parent[ai];
-
-            if (ip != aip) {
-                if (m_stones[ip] >= m_stones[aip]) {
-                    merge_strings(ip, aip);
-                } else {
-                    merge_strings(aip, ip);
-                }
-            }
+      if (square(ai) == otherColor(color)) {
+        if (stringLiberties(parentString(ai)) <= 0) {
+          val thisCaptured = removeString(ai)
+          capturedSq = ai
+          capturedStones += thisCaptured
         }
+      } else if (square(ai) == color) {
+        val ip = parentString(i)
+        val aip = parentString(ai)
+
+        if (ip != aip) {
+          if (stonesInString(ip) >= stonesInString(aip)) mergeStrings(ip, aip)
+          else mergeStrings(aip, ip)
+        }
+      }
     }
 
-    hash ^= Zobrist::zobrist_pris[color][m_prisoners[color]];
-    m_prisoners[color] += captured_stones;
-    hash ^= Zobrist::zobrist_pris[color][m_prisoners[color]];
+    hash ^= zobrist.zobristPristine(color)(prisoners(color))
+    prisoners(color) += capturedStones
+    hash ^= zobrist.zobristPristine(color)(prisoners(color))
 
     /* move last vertex in list to our position */
-    int lastvertex = m_empty[--m_empty_cnt];
-    m_empty_idx[lastvertex] = m_empty_idx[i];
-    m_empty[m_empty_idx[i]] = lastvertex;
+    emptyCnt -= 1
+    val lastvertex = emptySquare(emptyCnt)
+    emptyIdx(lastvertex) = emptyIdx(i)
+    emptySquare(emptyIdx(i)) = lastvertex
 
     /* check whether we still live (i.e. detect suicide) */
-    if (m_libs[m_parent[i]] == 0) {
-        assert(captured_stones == 0);
-        remove_string_fast(i);
+    if (stringLiberties(parentString(i)) == 0) {
+      assert(capturedStones == 0)
+      removeStringFast(i)
     }
 
-    if (captured_stones) {
-        capture = true;
-        /* check for possible simple ko */
-        if (captured_stones == 1 && eyeplay) {
-            return captured_sq;
-        }
+    var capture = false
+    if (capturedStones > 0) {
+      capture = true
+      /* check for possible simple ko */
+      if (capturedStones == 1 && eyePlay > 0) {
+        return (capturedSq, capture)
+      }
     }
 
-    return -1;
+    (-1, capture)
+  }
+
+  override def resetBoard(size: Short = MAX_BOARD_SIZE): Unit = {
+    super.resetBoard(size)
+    calcHash()
+    calcKoHash()
+  }
+
+  override def displayBoard(lastMove: Short = -1): Unit = {
+    super.displayBoard(lastMove)
+    println(f"Hash: ${hash.toHexString} Ko-Hash: ${koHash.toHexString}\n")
+  }
 }
-
-void FullBoard::display_board(int lastmove) {
-    FastBoard::display_board(lastmove);
-
-    myprintf("Hash: %llX Ko-Hash: %llX\n\n", hash, ko_hash);
-}
-
-void FullBoard::reset_board(int size) {
-    FastBoard::reset_board(size);
-
-    calc_hash();
-    calc_ko_hash();
-}
-
- */

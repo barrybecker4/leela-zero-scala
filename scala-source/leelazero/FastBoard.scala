@@ -52,18 +52,18 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     * It's the number of liberties for the string of which the index is the "parent" vertex,
     * and only guaranteed to be correct for that parent vertex.
     */
-  private var stringLiberties: Array[Int] = _
-  private var stonesInString: Array[Int] = _  // stones per string parent
-  private var neighbors: Array[Int] = _       // counts of neighboring stones
-  private var directions: Array[Int] = _      // movement in 4 directions
-  private var extraDirections: Array[Int] = _ // movement in 8 directions
-  private var prisoners: Array[Int] = _     // prisoners per color
+  protected var stringLiberties: Array[Int] = _
+  protected var stonesInString: Array[Int] = _  // stones per string parent
+  protected var neighbors: Array[Int] = _       // counts of neighboring stones
+  protected var directions: Array[Int] = _      // movement in 4 directions
+  protected var extraDirections: Array[Int] = _ // movement in 8 directions
+  protected var prisoners: Array[Int] = _     // prisoners per color
   protected var totalStones: Array[Int] = _   // total stones per color
   private var critical: Seq[Short] = Seq()  // queue of critical points  (use dropRight to pop)
   protected var emptySquare: Array[Short] = _ // empty squares
   protected var emptyIdx: Array[Int] = _      // indices of empty squares
   protected var emptyCnt: Int = _
-  private var toMove: Byte = _
+  protected var toMove: Byte = _
   protected var maxSq: Short = _
   private var fbs: FastBoardSerializer = _
   resetBoard(boardSize)
@@ -108,7 +108,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
   def setSquare(x: Int, y: Int, content: Byte): Unit = setSquare(getVertex(x, y), content)
 
   /** Take advantage of the 8 fold board symmetry to rotate a given position */
-  def rotateVertex(vertex: Short, symmetry: Short): Short = {
+  def rotateVertex(vertex: Short, symmetry: Int): Short = {
     assert(symmetry >= 0 && symmetry <= 7)
     val xy: Point = getXY(vertex)
     val x: Short = xy._1
@@ -259,7 +259,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     * However, the test for 0 liberties remains correct, and there is also a simple "atari" check.
     * @return number of pseudo liberties
     */
-  private def countPseudoLiberties(vertex: Short): Short = {
+  protected def countPseudoLiberties(vertex: Short): Short = {
     countNeighbors(EMPTY, vertex)
   }
 
@@ -338,7 +338,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
   def displayBoard(lastMove: Short = -1): Unit = print(toString(lastMove))
   override def toString: String = toString(-1)
   def toString(lastMove: Short): String = fbs.serialize(lastMove)
-  def updateBoardFast(x: Int, y: Int, color: Short): (Int, Boolean) = updateBoardFast(color, getVertex(x, y))
+  def updateBoardFast(x: Int, y: Int, color: Short): (Short, Boolean) = updateBoardFast(color, getVertex(x, y))
 
   def displayLiberties(lastMove: Short):  Unit = {
     println(fbs.toLibertiesString(lastMove))
@@ -351,7 +351,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     * @param vertex position
     * @return (ko square, capture) If no capture then return (-1, false)
     */
-  def updateBoardFast(color: Short, vertex: Short): (Int, Boolean) = {
+  def updateBoardFast(color: Short, vertex: Short): (Short, Boolean) = {
     assert(square(vertex) == EMPTY)
     assert(color == WHITE || color == BLACK)
 
@@ -553,7 +553,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     totalSize
   }
 
-  private def addNeighbor(vertex: Short, color: Short): Unit = {
+  protected def addNeighbor(vertex: Short, color: Short): Unit = {
     assert(color == WHITE || color == BLACK || color == EMPTY)
 
     val nbrParents = Array.ofDim[Short](4)
@@ -605,7 +605,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     }
   }
 
-  private def otherColor(color: Short): Short =
+  protected def otherColor(color: Short): Short =
     if (color == BLACK) WHITE
     else if (color == WHITE) BLACK
     else throw new IllegalStateException("Unexpected color: " + color)
@@ -623,7 +623,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
   }
 
   /** @return the number of stones in the string that was removed */
-  private def removeStringFast(vertex: Short): Int = {
+  protected def removeStringFast(vertex: Short): Int = {
     var pos: Short = vertex
     var removed = 0
     val color = square(vertex)
@@ -678,7 +678,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     bd
   }
 
-  private def mergeStrings(ip: Short, aip: Short): Unit = {
+  protected def mergeStrings(ip: Short, aip: Short): Unit = {
     assert(ip != maxSq && aip != maxSq)
     stonesInString(ip) += stonesInString(aip) // merge stones
     var newPos = aip              // loop over stones, update parents
