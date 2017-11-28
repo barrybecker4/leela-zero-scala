@@ -1,39 +1,46 @@
 package leelazero
 
-class FullBoard {
+import FastBoard._
+
+class FullBoard(size: Short = MAX_BOARD_SIZE) extends FastBoard(size) {
+
+  var hash: Long = _
+  var ko_hash: Long = _
+  val zobrist: Zobrist = new Zobrist(boardSize)
+
+
+  def removeString(i: Short): Short = {
+    var pos: Short = i
+    var removed: Short = 0
+    val color: Short = square(i)
+
+    do {
+      hash ^= zobrist.zobrist(square(pos))(pos)
+      ko_hash ^= zobrist.zobrist(square(pos))(pos)
+
+      square(pos) = EMPTY
+      parentString(pos) = maxSq
+      totalStones(color) -= 1
+
+      removeNeighbor(pos, color)
+
+      emptyIdx(pos) = emptyCnt
+      emptySquare(emptyCnt) = pos
+      emptyCnt += 1
+
+      hash ^= zobrist.zobrist(square(pos))(pos)
+      ko_hash ^= zobrist.zobrist(square(pos))(pos)
+
+      removed += 1
+      pos = next(pos)
+    } while (pos != i)
+    removed
+  }
 
 }
 
 /*
 
-int FullBoard::remove_string(int i) {
-    int pos = i;
-    int removed = 0;
-    int color = m_square[i];
-
-    do {
-        hash    ^= Zobrist::zobrist[m_square[pos]][pos];
-        ko_hash ^= Zobrist::zobrist[m_square[pos]][pos];
-
-        m_square[pos] = EMPTY;
-        m_parent[pos] = MAXSQ;
-        m_totalstones[color]--;
-
-        remove_neighbour(pos, color);
-
-        m_empty_idx[pos]      = m_empty_cnt;
-        m_empty[m_empty_cnt]  = pos;
-        m_empty_cnt++;
-
-        hash    ^= Zobrist::zobrist[m_square[pos]][pos];
-        ko_hash ^= Zobrist::zobrist[m_square[pos]][pos];
-
-        removed++;
-        pos = m_next[pos];
-    } while (pos != i);
-
-    return removed;
-}
 
 uint64 FullBoard::calc_ko_hash(void) {
     uint64 res;

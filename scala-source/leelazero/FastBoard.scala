@@ -40,12 +40,12 @@ object FastBoard {
   */
 class FastBoard(size: Short = MAX_BOARD_SIZE) {
 
-  private var boardSize: Short = size
+  protected var boardSize: Short = size
   private var scoreMoves: Seq[MoveScore] = _
 
-  private var square: Array[Byte] = _    // Board contents
-  private var next: Array[Short] = _     // next stone in string
-  private var parentString: Array[Short] = _  // parent string of vertex
+  protected var square: Array[Byte] = _    // Board contents
+  protected var parentString: Array[Short] = _  // parent string of vertex
+  protected var next: Array[Short] = _     // next stone in string
 
   /**
     * Liberties for the string that contains the specified vertex.
@@ -58,13 +58,13 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
   private var directions: Array[Int] = _      // movement in 4 directions
   private var extraDirections: Array[Int] = _ // movement in 8 directions
   private var prisoners: Array[Int] = _     // prisoners per color
-  private var totalStones: Array[Int] = _   // total stones per color
+  protected var totalStones: Array[Int] = _   // total stones per color
   private var critical: Seq[Short] = Seq()  // queue of critical points  (use dropRight to pop)
-  private var emptySquare: Array[Short] = _ // empty squares
-  private var emptyIdx: Array[Int] = _      // indices of empty squares
-  private var emptyCnt: Int = _
+  protected var emptySquare: Array[Short] = _ // empty squares
+  protected var emptyIdx: Array[Int] = _      // indices of empty squares
+  protected var emptyCnt: Int = _
   private var toMove: Byte = _
-  private var maxSq: Short = _
+  protected var maxSq: Short = _
   private var fbs: FastBoardSerializer = _
   resetBoard(boardSize)
 
@@ -579,7 +579,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     }
   }
 
-  private def removeNeighbor(vertex: Short, color: Short): Unit = {
+  protected def removeNeighbor(vertex: Short, color: Short): Unit = {
     assert(color == WHITE || color == BLACK || color == EMPTY)
     val nbrParents = Array.ofDim[Short](4)
     var nbrParentCount = 0
