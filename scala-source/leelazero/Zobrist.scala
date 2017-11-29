@@ -15,7 +15,7 @@ object Zobrist {
   * See https://en.wikipedia.org/wiki/Zobrist_hashing
   * See https://stackoverflow.com/questions/21212993/unsigned-variables-in-scala
   */
-class Zobrist(size: Short) {
+class Zobrist(size: Short, rand: Random = RND) {
   private val maxSq: Short = calcMaxSquare(size)
 
   val zobrist: Array[Array[Long]] = Array.ofDim(4, maxSq)
@@ -23,7 +23,7 @@ class Zobrist(size: Short) {
   val zobristPass: Array[Long] = Array.ofDim(5)
   init()
 
-  private def init(rand: Random = RND): Unit = {
+  private def init(): Unit = {
     def nextR() = rand.nextInt().toLong
 
     for (i <- 0 until 4) {

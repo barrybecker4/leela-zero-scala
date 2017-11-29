@@ -4,6 +4,7 @@ import FastBoard._
 import FullBoard._
 
 object FullBoard {
+
   /** Initial Zobrist hash when computing hashes for board positions.
     * Largest scala Long is 9223372036854775807. The 0x prefix indicates hexadecimal.
     */
@@ -14,14 +15,14 @@ class FullBoard(size: Short = MAX_BOARD_SIZE) extends FastBoard(size) {
 
   private var hash: Long = _
   private var koHash: Long = _
-  private val zobrist: Zobrist = new Zobrist(boardSize)
+  private var zobrist: Zobrist = _
 
   def getHash: Long = hash
   def getKoHash: Long = koHash
 
   /**
     * Remove the string from the board that the specified position is part of.
-    * @return the number of stones in the string that was remvoed from the baord
+    * @return the number of stones in the string that was removed from the board
     */
   def removeString(position: Short): Int = {
     var pos: Short = position
@@ -183,6 +184,7 @@ class FullBoard(size: Short = MAX_BOARD_SIZE) extends FastBoard(size) {
 
   override def resetBoard(size: Short = MAX_BOARD_SIZE): Unit = {
     super.resetBoard(size)
+    zobrist = new Zobrist(boardSize)
     calcHash()
     calcKoHash()
   }

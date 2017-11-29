@@ -7,8 +7,10 @@ import TestUtil._
 
 class FastBoardSuite extends FunSuite {
 
+  def createBoard(size: Short = MAX_BOARD_SIZE): FastBoard = new FastBoard(size)
+
   test("Create an empty 3x3 board") {
-    val b = new FastBoard(3)
+    val b = createBoard(3)
     assertResult(clean("""
         |   a b c
         | 3 . . .  3
@@ -64,7 +66,7 @@ class FastBoardSuite extends FunSuite {
   }
 
   test("get vertex on 19x19") {
-    val b = new FastBoard()
+    val b = createBoard()
     assertResult(22) {b.getVertex(0, 0)}
     assertResult(43) {b.getVertex(0, 1)}
     assertResult(44) {b.getVertex(1, 1)}
@@ -73,7 +75,7 @@ class FastBoardSuite extends FunSuite {
   }
 
   test("getXY from vertex") {
-    val b = new FastBoard()
+    val b = createBoard()
     assertResult((0, 0)) {b.getXY(22)}
     assertResult((0, 1)) {b.getXY(43)}
     assertResult((1, 1)) {b.getXY(44)}
@@ -86,7 +88,7 @@ class FastBoardSuite extends FunSuite {
   }
 
   test("set/getSquare contents") {
-    val b = new FastBoard()
+    val b = createBoard()
     assertResult(EMPTY) { b.getSquare(43)}
     assertResult(EMPTY) { b.getSquare(0, 1)}
     b.setSquare(43, BLACK)
@@ -96,7 +98,7 @@ class FastBoardSuite extends FunSuite {
   }
 
   test("rotateVertex (2, 1)") {
-    val b = new FastBoard()
+    val b = createBoard()
     for (i <- 0  to 7)
       b.setSquare(b.rotateVertex(b.getVertex(2, 1), i.toShort), BLACK)
     assertResult(clean("""
@@ -126,7 +128,7 @@ class FastBoardSuite extends FunSuite {
   }
 
   test("rotateVertex (1, 0)") {
-    val b = new FastBoard()
+    val b = createBoard()
     for (i <- 0  to 7)
       b.setSquare(b.rotateVertex(b.getVertex(1, 0), i.toShort), BLACK)
     assertResult(clean("""
@@ -156,7 +158,7 @@ class FastBoardSuite extends FunSuite {
   }
 
   test("isSuicide when not suicide (for black)") {
-      val b = new FastBoard(5)
+      val b = createBoard(5)
       b.setSquare(2, 2, WHITE)
       assertResult(false) { b.isSuicide(b.getVertex(1, 1), BLACK) }
       assertResult(false) { b.isSuicide(b.getVertex(2, 1), BLACK) }
@@ -327,7 +329,7 @@ class FastBoardSuite extends FunSuite {
   }
 
   test("getStoneList of empty 5x5") {
-    val b = new FastBoard(5)
+    val b = createBoard(5)
     assertResult("") { b.getStoneList}
   }
 
@@ -376,8 +378,8 @@ class FastBoardSuite extends FunSuite {
        1 . . O . .  1
          a b c d e
     */
-  private def create5x5AllWhiteField(): FastBoard = {
-    val b = new FastBoard(5)
+  protected def create5x5AllWhiteField(): FastBoard = {
+    val b = createBoard(5)
     b.updateBoardFast(1, 2, WHITE)
     b.updateBoardFast(2, 1, WHITE)
     b.updateBoardFast(2, 2, WHITE)
@@ -400,8 +402,8 @@ class FastBoardSuite extends FunSuite {
        1 . . . . .  1
          a b c d e
     */
-  private def create5x5AllBlackField(): FastBoard = {
-    val b = new FastBoard(5)
+  protected def create5x5AllBlackField(): FastBoard = {
+    val b = createBoard(5)
     b.updateBoardFast(1, 2, BLACK)
     b.updateBoardFast(2, 1, BLACK)
     b.updateBoardFast(0, 4, BLACK)
@@ -425,8 +427,8 @@ class FastBoardSuite extends FunSuite {
       1 . . . . .  1
         a b c d e
     */
-  private def createSemiFilled5x5Board(): FastBoard = {
-    val b = new FastBoard(5)
+  protected def createSemiFilled5x5Board(): FastBoard = {
+    val b = createBoard(5)
     b.updateBoardFast(1, 1, BLACK)
     b.updateBoardFast(2, 1, BLACK)
     b.updateBoardFast(3, 1, WHITE)
@@ -447,8 +449,8 @@ class FastBoardSuite extends FunSuite {
       1 O X . X .  1
         a b c d e
     */
-  private def createFilled5x5Board(): FastBoard = {
-    val b = new FastBoard(5)
+  protected def createFilled5x5Board(): FastBoard = {
+    val b = createBoard(5)
     b.updateBoardFast(1, 1, BLACK)
     b.updateBoardFast(2, 1, BLACK)
     b.updateBoardFast(3, 1, WHITE)
@@ -477,8 +479,8 @@ class FastBoardSuite extends FunSuite {
       1 . O . X .  1
         a b c d e
     */
-  private def createInAtari5x5Board(): FastBoard = {
-    val b = new FastBoard(5)
+  protected def createInAtari5x5Board(): FastBoard = {
+    val b = createBoard(5)
     b.updateBoardFast(1, 1, BLACK)
     b.updateBoardFast(2, 1, BLACK)
     b.updateBoardFast(3, 1, WHITE)

@@ -107,7 +107,10 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
   def getSquare(x: Int, y: Int): Byte = getSquare(getVertex(x, y))
   def setSquare(x: Int, y: Int, content: Byte): Unit = setSquare(getVertex(x, y), content)
 
-  /** Take advantage of the 8 fold board symmetry to rotate a given position */
+  /**
+    * Take advantage of the 8 fold board symmetry to rotate a given position by one of the symmetries
+    * @return the new rotated vertex position given the specified symmetry
+    */
   def rotateVertex(vertex: Short, symmetry: Int): Short = {
     assert(symmetry >= 0 && symmetry <= 7)
     val xy: Point = getXY(vertex)
@@ -264,8 +267,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
   }
 
   /**
-    * Actual liberties of the string the specified vertex position belongs to.
-    * Possibly implemented using union-find (need to verify).
+    * Actual liberties of the string the specified vertex position belongs to. Implemented using union-find.
     * The difference is speed, pseudo liberties have O(1) adding and removal,
     * and real liberties have the inverse Ackermann function for that,
     * but in practice there is a significant speed difference.
@@ -490,7 +492,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
 
   /**
     * @param vertex the vertex to check if in atari
-    * @return the vertex which will capture this string, if there is one; else return 0 if not in atari.
+    * @return the vertex of the liberty which will capture this string, if there is one; else return 0 if not in atari.
     */
   def inAtari(vertex: Short): Int = {
     assert(isOccupied(vertex))

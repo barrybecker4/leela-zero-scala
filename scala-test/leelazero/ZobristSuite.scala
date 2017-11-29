@@ -2,11 +2,20 @@ package leelazero
 
 import org.scalatest.FunSuite
 
+import scala.util.Random
+import ZobristSuite._
+
+
+object ZobristSuite {
+  val RND = new Random()
+  RND.setSeed(0)
+}
+
 
 class ZobristSuite extends FunSuite {
 
   test("typical zobrist instance") {
-    val z = new Zobrist(5)
+    val z = new Zobrist(5, RND)
 
     assertResult(3896605098068159738L) {z.zobrist(1)(1) }
     assertResult(-4651716432629916536L) {z.zobristPristine(1)(1) }
