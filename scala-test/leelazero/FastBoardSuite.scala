@@ -97,90 +97,6 @@ class FastBoardSuite extends FunSuite {
     assertResult(WHITE) { b.getSquare(43)}
   }
 
-  test("rotateVertex (2, 1)") {
-    val b = createBoard()
-    for (i <- 0  to 7)
-      b.setSquare(b.rotateVertex(b.getVertex(2, 1), i.toShort), BLACK)
-    assertResult(clean("""
-                         |   a b c d e f g h j k l m n o p q r s t
-                         |19 . . . . . . . . . . . . . . . . . . . 19
-                         |18 . . X . . . . . . . . . . . . . X . . 18
-                         |17 . X . . . . . . . . . . . . . . . X . 17
-                         |16 . . . + . . . . . + . . . . . + . . . 16
-                         |15 . . . . . . . . . . . . . . . . . . . 15
-                         |14 . . . . . . . . . . . . . . . . . . . 14
-                         |13 . . . . . . . . . . . . . . . . . . . 13
-                         |12 . . . . . . . . . . . . . . . . . . . 12
-                         |11 . . . . . . . . . . . . . . . . . . . 11
-                         |10 . . . + . . . . . + . . . . . + . . . 10
-                         | 9 . . . . . . . . . . . . . . . . . . .  9
-                         | 8 . . . . . . . . . . . . . . . . . . .  8
-                         | 7 . . . . . . . . . . . . . . . . . . .  7
-                         | 6 . . . . . . . . . . . . . . . . . . .  6
-                         | 5 . . . . . . . . . . . . . . . . . . .  5
-                         | 4 . . . + . . . . . + . . . . . + . . .  4
-                         | 3 . X . . . . . . . . . . . . . . . X .  3
-                         | 2 . . X . . . . . . . . . . . . . X . .  2
-                         | 1 . . . . . . . . . . . . . . . . . . .  1
-                         |   a b c d e f g h j k l m n o p q r s t
-                         |
-                         |""")) {b.toString}
-  }
-
-  test("rotateVertex (1, 0)") {
-    val b = createBoard()
-    for (i <- 0  to 7)
-      b.setSquare(b.rotateVertex(b.getVertex(1, 0), i.toShort), BLACK)
-    assertResult(clean("""
-                         |   a b c d e f g h j k l m n o p q r s t
-                         |19 . X . . . . . . . . . . . . . . . X . 19
-                         |18 X . . . . . . . . . . . . . . . . . X 18
-                         |17 . . . . . . . . . . . . . . . . . . . 17
-                         |16 . . . + . . . . . + . . . . . + . . . 16
-                         |15 . . . . . . . . . . . . . . . . . . . 15
-                         |14 . . . . . . . . . . . . . . . . . . . 14
-                         |13 . . . . . . . . . . . . . . . . . . . 13
-                         |12 . . . . . . . . . . . . . . . . . . . 12
-                         |11 . . . . . . . . . . . . . . . . . . . 11
-                         |10 . . . + . . . . . + . . . . . + . . . 10
-                         | 9 . . . . . . . . . . . . . . . . . . .  9
-                         | 8 . . . . . . . . . . . . . . . . . . .  8
-                         | 7 . . . . . . . . . . . . . . . . . . .  7
-                         | 6 . . . . . . . . . . . . . . . . . . .  6
-                         | 5 . . . . . . . . . . . . . . . . . . .  5
-                         | 4 . . . + . . . . . + . . . . . + . . .  4
-                         | 3 . . . . . . . . . . . . . . . . . . .  3
-                         | 2 X . . . . . . . . . . . . . . . . . X  2
-                         | 1 . X . . . . . . . . . . . . . . . X .  1
-                         |   a b c d e f g h j k l m n o p q r s t
-                         |
-                         |""")) {b.toString}
-  }
-
-  test("isSuicide when not suicide (for black)") {
-      val b = createBoard(5)
-      b.setSquare(2, 2, WHITE)
-      assertResult(false) { b.isSuicide(b.getVertex(1, 1), BLACK) }
-      assertResult(false) { b.isSuicide(b.getVertex(2, 1), BLACK) }
-  }
-
-
-  test("isSuicide when suicide (for black in all white field)") {
-    val b = create5x5AllWhiteField()
-
-    assertResult(false) { b.isSuicide(b.getVertex(1, 1), BLACK) }
-    assertResult(true) {
-      b.isSuicide(b.getVertex(3, 3), BLACK)
-    }
-    assertResult(true) {
-      b.isSuicide(b.getVertex(4, 4), BLACK)
-    }
-    assertResult(false) {
-      b.isSuicide(b.getVertex(4, 2), BLACK)
-    }
-    assertResult(true) { b.isSuicide(b.getVertex(4, 4), BLACK) }
-  }
-
   test("Count real liberties on 5x5") {
     val b = createSemiFilled5x5Board()
     val vertices = Array(
@@ -200,11 +116,6 @@ class FastBoardSuite extends FunSuite {
     assertResult("3, 1, 2, 2, 1, 2, 3") {  // correct!
       vertices.map(v => b.countNeighbors(EMPTY, v)).mkString(", ")
     }
-  }
-
-  test("getStoneCount on 5x5") {
-    val b = createSemiFilled5x5Board()
-    assertResult(8) { b.getStoneCount }
   }
 
   test("calcAreaScore on 5x5") {
@@ -304,22 +215,6 @@ class FastBoardSuite extends FunSuite {
     assertResult("31 23 32 38 24") {b.getStringStones(b.getVertex(2, 2)).mkString(" ")}
   }
 
-  test("fastIsAtari") {
-    val b = createInAtari5x5Board()
-    println(b)
-    assertResult(true) { b.fastInAtari(b.getVertex(1, 1)) }
-    assertResult(false) { b.fastInAtari(b.getVertex(2, 3)) }
-    assertResult(true) { b.fastInAtari(b.getVertex(3, 1)) }
-  }
-
-  test("inAtari") {
-    val b = createInAtari5x5Board()
-    assertResult(10) { b.inAtari(b.getVertex(1, 1))}
-    assertResult(0) { b.inAtari(b.getVertex(3, 2))}
-    assertResult(0) { b.inAtari(b.getVertex(2, 3))}
-    assertResult(12) { b.inAtari(b.getVertex(3, 1))}
-  }
-
   test("getDir") {
     val b = createFilled5x5Board()
     assertResult(-7) { b.getDir(0)}
@@ -341,32 +236,6 @@ class FastBoardSuite extends FunSuite {
   test("getStoneList filled") {
     val b = createFilled5x5Board()
     assertResult("A1 A3 A4 B1 B2 B3 C2 C3 C4 C5 D1 D2 D3 D4 E4 E5") { b.getStoneList}
-  }
-
-  test("stringSize") {
-    val b = createFilled5x5Board()
-    assertResult(3) { b.stringSize(b.getVertex(1, 1))}
-    assertResult(1) { b.stringSize(b.getVertex(3, 2))}
-    assertResult(5) { b.stringSize(b.getVertex(2, 3))}
-    assertResult(1) { b.stringSize(b.getVertex(3, 1))}
-    assertThrows[AssertionError] {
-      b.stringSize(b.getVertex(1, 3))
-    }
-  }
-
-  test("mergedStringSize") {
-    val b = createFilled5x5Board()
-    assertResult(3) { b.mergedStringSize(BLACK, b.getVertex(1, 1))}
-    assertResult(5) { b.mergedStringSize(WHITE, b.getVertex(1, 1))}
-
-    assertResult(2) { b.mergedStringSize(BLACK, b.getVertex(0, 2))}
-    assertResult(5) { b.mergedStringSize(WHITE, b.getVertex(0, 2))}
-
-    assertResult(4) { b.mergedStringSize(BLACK, b.getVertex(2, 0))}
-    assertResult(0) { b.mergedStringSize(WHITE, b.getVertex(2, 0))}
-
-    assertResult(2) { b.mergedStringSize(BLACK, b.getVertex(1, 3)) }
-    assertResult(5) { b.mergedStringSize(WHITE, b.getVertex(1, 3)) }
   }
 
   /**

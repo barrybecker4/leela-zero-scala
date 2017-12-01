@@ -18,7 +18,6 @@ class FullBoard(size: Short = MAX_BOARD_SIZE) extends FastBoard(size) {
   private var zobrist: Zobrist = _
 
   def getHash: Long = hash
-  def getKoHash: Long = koHash
 
   /**
     * Remove the string from the board that the specified position is part of.
@@ -64,23 +63,6 @@ class FullBoard(size: Short = MAX_BOARD_SIZE) extends FastBoard(size) {
     hash
   }
 
-  def getRotatedHashes: Array[Long] = {
-    val result = Array.ofDim[Long](8)
-
-    for (sym <- 0 until 8) {
-      var res = INITIAL_HASH
-
-      for (i <- 0 until maxSq) {
-        if (square(i) != INVALID) {
-          val newi = rotateVertex(i.toShort, sym)
-          res ^= zobrist.zobrist(square(i))(newi)
-        }
-      }
-      result(sym) = incorporatePrisoners(res)
-    }
-    result
-  }
-
   private def calcBaseHash(): Long = {
     var res = INITIAL_HASH
 
@@ -100,8 +82,6 @@ class FullBoard(size: Short = MAX_BOARD_SIZE) extends FastBoard(size) {
       res ^= 0xABCDABCDABCDABCDL
     res
   }
-
-  private def getCanonicalHash: Long = getRotatedHashes.min
 
   /**
     * Returns ko square or suicide tag. Does not update side to move.
