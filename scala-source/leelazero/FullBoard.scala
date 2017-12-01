@@ -38,9 +38,9 @@ class FullBoard(size: Short = MAX_BOARD_SIZE) extends FastBoard(size) {
 
       removeNeighbor(pos, color)
 
-      emptyIdx(pos) = emptyCnt
-      emptySquare(emptyCnt) = pos
-      emptyCnt += 1
+      emptyIdx(pos) = emptyCount
+      emptySquare(emptyCount) = pos
+      emptyCount += 1
 
       hash ^= zobrist.zobrist(square(pos))(pos)
       koHash ^= zobrist.zobrist(square(pos))(pos)
@@ -61,6 +61,25 @@ class FullBoard(size: Short = MAX_BOARD_SIZE) extends FastBoard(size) {
   def calcHash(): Long = {
     hash = incorporatePrisoners(calcBaseHash())
     hash
+  }
+
+  def playPass(passes: Int): Unit = {
+    hash  ^= 0xABCDABCDABCDABCDL
+    toMove = otherColor(toMove)
+    hash ^= zobrist.zobristPass(passes)
+    hash ^= zobrist.zobristPass(passes)
+  }
+
+  def playMove(color: Byte, passes: Int): Unit = {
+    if (toMove == color) {
+      hash  ^= 0xABCDABCDABCDABCDL
+    }
+    toMove = otherColor(color)
+
+    if (passes > 0) {
+      hash ^= zobrist.zobristPass(passes)
+      hash ^= zobrist.zobristPass(0)
+    }
   }
 
   private def calcBaseHash(): Long = {
@@ -89,7 +108,7 @@ class FullBoard(size: Short = MAX_BOARD_SIZE) extends FastBoard(size) {
     * @param i position
     * @return (ko square, capture) If no capture then return (-1, false)
     */
-  def updateBoard(color: Short, i: Short): (Short, Boolean) = {
+  def updateBoard(color: Byte, i: Short): (Short, Boolean) = {
     assert(square(i) == EMPTY)
 
     hash ^= zobrist.zobrist(square(i))(i)
@@ -139,8 +158,8 @@ class FullBoard(size: Short = MAX_BOARD_SIZE) extends FastBoard(size) {
     hash ^= zobrist.zobristPristine(color)(prisoners(color))
 
     /* move last vertex in list to our position */
-    emptyCnt -= 1
-    val lastvertex = emptySquare(emptyCnt)
+    emptyCount -= 1
+    val lastvertex = emptySquare(emptyCount)
     emptyIdx(lastvertex) = emptyIdx(i)
     emptySquare(emptyIdx(i)) = lastvertex
 

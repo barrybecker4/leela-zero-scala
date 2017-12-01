@@ -12,7 +12,7 @@ object FastBoard {
   val MAX_BOARD_SIZE: Short = 19
 
   /** highest existing square. Indicates that an empty square is never in atari. Large value that fits in a short. */
-  val MAX_LIBS: Short =  16384  // 2^14
+  val INF_LIBS: Short =  16384  // 2^14
 
   /** infinite score */
   val BIG = 10000000
@@ -26,7 +26,7 @@ object FastBoard {
   type Point = (Short, Short)
   type MoveScore = (Short, Float)    // movescore_t
 
-  /**  bit masks to detect eyes on neighbors */
+  /** Bit masks to detect eyes on neighbors */
   val EYE_MASK: Array[Short] = Array(        // s_eyemask
     (4 * (1 << (NBR_SHIFT * BLACK))).toShort,
     (4 * (1 << (NBR_SHIFT * WHITE))).toShort
@@ -62,7 +62,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
   private var critical: Seq[Short] = Seq()  // queue of critical points  (use dropRight to pop)
   protected var emptySquare: Array[Short] = _ // empty squares
   protected var emptyIdx: Array[Int] = _      // indices of empty squares
-  protected var emptyCnt: Int = _
+  protected var emptyCount: Int = _
   protected var toMove: Byte = _
   protected var maxSq: Short = _
   private var fbs: FastBoardSerializer = _
@@ -81,6 +81,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
 
   def validVertex(vertex: Short): Boolean = vertex >= 0 && vertex < maxSq
   def getVertex(x: Int, y: Int): Short = getVertex(x.toShort, y.toShort)
+  def getEmpties = emptySquare
 
   /** @return the x,y coordinate from the 1D index */
   def getXY(vertex: Short): Point = {
@@ -135,7 +136,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     prisoners(WHITE) = 0
     totalStones(BLACK) = 0
     totalStones(WHITE) = 0
-    emptyCnt = 0
+    emptyCount = 0
 
     directions(0) = -boardSize - 2
     directions(1) = +1
@@ -160,7 +161,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     initializeNeighbors()
 
     parentString(maxSq ) = maxSq
-    stringLiberties(maxSq) = MAX_LIBS   /* subtract from this */
+    stringLiberties(maxSq) = INF_LIBS   /* subtract from this */
     next(maxSq) = maxSq
   }
 
@@ -170,9 +171,9 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
         val vertex: Short = getVertex(i, j)
 
         square(vertex) = EMPTY
-        emptyIdx(vertex) = emptyCnt
-        emptySquare(emptyCnt) = vertex
-        emptyCnt = (emptyCnt + 1).toShort
+        emptyIdx(vertex) = emptyCount
+        emptySquare(emptyCount) = vertex
+        emptyCount = (emptyCount + 1).toShort
 
         if (i == 0 || i == boardSize - 1) initializeOnBorder(vertex) else initializeCenterPoint(vertex)
         if (j == 0 || j == boardSize - 1) initializeOnBorder(vertex) else initializeCenterPoint(vertex)
@@ -186,18 +187,53 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
   }
   private def initializeCenterPoint(vertex: Short): Unit = { neighbors(vertex) += 2 << (NBR_SHIFT * EMPTY) }
 
+  /** @return true if placing the specified colored stone at the specified position would be suicide */
+  def isSuicide(vertex: Short, color: Short): Boolean = {
+    if (countPseudoLiberties(vertex) > 0) return false
+
+    var connecting = false
+
+    for (k <- 0 until 4) {
+      val ai = (vertex + directions(k)).toShort
+
+      val libs = countStringLiberties(ai)
+      if (getSquare(ai) == color) {
+        if (libs > 1) {
+          return false // connecting to live group is never suicide
+        }
+        connecting = true
+      } else {
+        if (libs <= 1) {
+          return false // killing a neighbor is never suicide
+        }
+      }
+    }
+
+    addNeighbor(vertex, color)
+    var opps_live = true
+    var ours_die = true
+
+    for (k <- 0 until 4) {
+      val ai = (vertex + directions(k)).toShort
+      val libs = countStringLiberties(ai)
+
+      if (libs == 0 && getSquare(ai) != color) {
+        opps_live = false
+      } else if (libs != 0 && getSquare(ai) == color) {
+        ours_die = false
+      }
+    }
+
+    removeNeighbor(vertex, color)
+    if (!connecting) opps_live else opps_live && ours_die
+  }
+
   /** @return number of liberties on a single point - called pseudo liberties. */
   protected def countPseudoLiberties(vertex: Short): Short = {
     countNeighbors(EMPTY, vertex)
   }
 
-  /**
-    * Actual liberties of the string the specified vertex position belongs to. Implemented using union-find.
-    * The difference is speed, pseudo liberties have O(1) adding and removal,
-    * and real liberties have the inverse Ackermann function for that,
-    * but in practice there is a significant speed difference.
-    * @return number of real liberties
-    */
+  /** @return actual liberties of the string the specified vertex position belongs to */
   def countStringLiberties(vertex: Int): Int = stringLiberties(parentString(vertex))
 
   /**
@@ -210,8 +246,8 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
   }
 
   /**
-    * The score is from the point of view of the black player. A negative score means white is leading.
-    * @return score needed for scoring passed out games not in Monte-Carlo play-outs
+    * Score needed for scoring passed out games not in Monte-Carlo play-outs
+    * @return area score is from the point of view of the black player. A negative score means white is leading.
     */
   def areaScore(komi: Float): Float = {
     val white = calcReachColor(WHITE)
@@ -242,7 +278,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
 
   /** @return final Monte-Carlo play-out score */
   def finalMcScore(komi: Float): Float = {
-    val maxempty = emptyCnt
+    val maxempty = emptyCount
     var bsc = totalStones(BLACK)
     var wsc = totalStones(WHITE)
 
@@ -263,7 +299,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
   def displayBoard(lastMove: Short = -1): Unit = print(toString(lastMove))
   override def toString: String = toString(-1)
   def toString(lastMove: Short): String = fbs.serialize(lastMove)
-  def updateBoardFast(x: Int, y: Int, color: Short): (Short, Boolean) = updateBoardFast(color, getVertex(x, y))
+  def updateBoardFast(x: Int, y: Int, color: Byte): (Short, Boolean) = updateBoardFast(color, getVertex(x, y))
 
   def displayLiberties(lastMove: Short):  Unit = {
     println(fbs.toLibertiesString(lastMove))
@@ -276,7 +312,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     * @param vertex position
     * @return (ko square, capture) If no capture then return (-1, false)
     */
-  def updateBoardFast(color: Short, vertex: Short): (Short, Boolean) = {
+  def updateBoardFast(color: Byte, vertex: Short): (Short, Boolean) = {
     assert(square(vertex) == EMPTY)
     assert(color == WHITE || color == BLACK)
 
@@ -323,9 +359,9 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
       }
     }
 
-    /* move last vertex in list to our position */
-    emptyCnt -= 1
-    val lastVertex = emptySquare(emptyCnt)
+    // move last vertex in list to our position
+    emptyCount -= 1
+    val lastVertex = emptySquare(emptyCount)
     emptyIdx(lastVertex) = emptyIdx(vertex)
     emptySquare(emptyIdx(vertex)) = lastVertex
     assert(countStringLiberties(vertex) < boardSize * boardSize)
@@ -336,7 +372,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
   }
 
   /** @return true if surrounded on 4 sides by the specified color and there are enough diagonals to avoid false eye. */
-  def isEye(color: Short, vertex: Short): Boolean = {
+  def isEye(color: Byte, vertex: Short): Boolean = {
     val ownSurrounded = (neighbors(vertex) & EYE_MASK(color)) > 0
 
     // If not, it can't be an eye. This takes advantage of borders being colored both ways.
@@ -461,7 +497,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     }
   }
 
-  protected def otherColor(color: Short): Short =
+  protected def otherColor(color: Byte): Byte =
     if (color == BLACK) WHITE
     else if (color == WHITE) BLACK
     else throw new IllegalStateException("Unexpected color: " + color)
@@ -481,9 +517,9 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
 
       removeNeighbor(pos, color)
 
-      emptyIdx(pos) = emptyCnt
-      emptySquare(emptyCnt) = pos
-      emptyCnt += 1
+      emptyIdx(pos) = emptyCount
+      emptySquare(emptyCount) = pos
+      emptyCount += 1
 
       removed += 1
       pos = next(pos)
@@ -584,8 +620,8 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     }
 
     // move last vertex in list to our position
-    emptyCnt -= 1
-    val lastVertex = emptySquare(emptyCnt)
+    emptyCount -= 1
+    val lastVertex = emptySquare(emptyCount)
     emptyIdx(lastVertex) = emptyIdx(i)
     emptySquare(emptyIdx(i)) = lastVertex
     prisoners(color) += capturedStones
