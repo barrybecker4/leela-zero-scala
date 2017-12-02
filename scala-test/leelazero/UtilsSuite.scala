@@ -14,7 +14,7 @@ class UtilsSuite extends FunSuite {
     val foo = 4
     Utils.myPrint(f"$foo%2d result")
 
-    assertResult(" 4 result") { out.toString }
+    assert( out.toString.endsWith(" 4 result"))
   }
 
   test("Longest hex long") {

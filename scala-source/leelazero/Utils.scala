@@ -10,7 +10,7 @@ object Utils {
 
   def myPrint(string: String): Unit = {
     if (!cfgQuiet) {
-      System.err.println(string)
+      System.out.println(string)
       if (cfgLogFileHandle.nonEmpty) {
         this.synchronized {
           //std::lock_guard<std::mutex> lock(IOmutex)  ??
@@ -58,4 +58,9 @@ object Utils {
       }
     }
   }
+
+
+  def rotateLeft(a: Long, b: Int): Long = (a << b) | (a >> (64 - b))
+  def rotateLeft(x: Int, k: Int): Int = (x << k) | (x >> (32 - k))
+  def is7bit(c: Int): Boolean = c >= 0 && c <= 127
 }

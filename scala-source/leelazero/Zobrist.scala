@@ -2,12 +2,11 @@ package leelazero
 
 import FastBoard._
 import Zobrist._
-import scala.util.Random
+//import scala.util.Random can we use this instead?
 
 
 object Zobrist {
-  val RND = new Random()
-  RND.setSeed(0)
+  val RND = new Randomizer(5489)
 }
 
 /**
@@ -15,7 +14,7 @@ object Zobrist {
   * See https://en.wikipedia.org/wiki/Zobrist_hashing
   * See https://stackoverflow.com/questions/21212993/unsigned-variables-in-scala
   */
-class Zobrist(size: Short, rand: Random = RND) {
+class Zobrist(size: Short, rand: Randomizer = RND) {
   private val maxSq: Short = calcMaxSquare(size)
 
   val zobrist: Array[Array[Long]] = Array.ofDim(4, maxSq)
