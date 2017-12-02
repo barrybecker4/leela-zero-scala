@@ -12,6 +12,7 @@ class KoState(val size: Short, val komi: Float) {
   /** @return true if there is a superKo. IOW if the koHash repeats in the history */
   def superKo(): Boolean = koHashHistory.tail.dropRight(1).contains(state.getKoHash)
   def superKo(newHash: Long): Boolean = koHashHistory.dropRight(1).contains(newHash)
+  def getKoHash: Long = state.getKoHash
 
   def resetGame(): Unit = {
     state.resetGame()
@@ -26,6 +27,7 @@ class KoState(val size: Short, val komi: Float) {
 
   def playMove(vertex: Short): Unit = state.playMove(vertex)
 
+  def playMove(color: Byte, x: Short, y: Short): Unit = playMove(color, state.getVertex(x, y))
   def playMove(color: Byte, vertex: Short): Unit = {
     if (vertex != PASS && vertex != RESIGN) {
       state.playMove(color, vertex)
