@@ -49,7 +49,7 @@ class FastState(val size: Short, val komi: Float) {
     playMove(board.getToMove, vertex)
   }
 
-  private def playMove(color: Byte, vertex: Short): Unit = {
+  def playMove(color: Byte, vertex: Short): Unit = {
     if (vertex != PASS && vertex != RESIGN) {
       val (km, capture) = board.updateBoard(color, vertex)
       koMove = km
@@ -76,6 +76,11 @@ class FastState(val size: Short, val komi: Float) {
   def finalScore: Float = board.areaScore(komi + handicap)  // workstate?
   def getKoMove: Short = koMove
   def getVertex(x: Short, y: Short): Short = board.getVertex(x, y)
+
+  def getHash: Long = board.getHash
+  def getKoHash: Long = board.getKoHash
+  def calcHash: Long = board.calcHash()
+  def calcKoHash: Long = board.calcKoHash()
 
   def displayState(): Unit = {
     myPrint(f"\nPasses: $passes%d")

@@ -18,6 +18,7 @@ class FullBoard(size: Short = MAX_BOARD_SIZE) extends FastBoard(size) {
   private var zobrist: Zobrist = _
 
   def getHash: Long = hash
+  def getKoHash: Long = koHash
 
   /**
     * Remove the string from the board that the specified position is part of.
