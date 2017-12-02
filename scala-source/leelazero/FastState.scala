@@ -4,7 +4,9 @@ import Utils._
 import FastBoardSerializer.{PASS, RESIGN}
 import FastBoard.{BLACK, WHITE}
 
-
+/**
+  * Maintains the state of the board
+  */
 class FastState(val size: Short, val komi: Float) {
 
   private val board: FullBoard = new FullBoard(size)
@@ -63,7 +65,7 @@ class FastState(val size: Short, val komi: Float) {
   }
 
   def getMoveNum: Int = moveNum
-  def esitmateMsScore: Int = board.estimateMcScore(komi + handicap)
+  def estimateMsScore: Int = board.estimateMcScore(komi + handicap)
   def getToMove: Byte = board.getToMove
   def setToMove(tomove: Byte) { board.setToMove(tomove) }
   def getHandicap: Short = handicap

@@ -118,6 +118,31 @@ class FastBoardSuite extends FunSuite {
     }
   }
 
+
+  test("isSuicide when not suicide (for black)") {
+    val b = createBoard(5)
+    b.setSquare(2, 2, WHITE)
+    assertResult(false) { b.isSuicide(b.getVertex(1, 1), BLACK) }
+    assertResult(false) { b.isSuicide(b.getVertex(2, 1), BLACK) }
+  }
+
+
+  test("isSuicide when suicide (for black in all white field)") {
+    val b = create5x5AllWhiteField()
+
+    assertResult(false) { b.isSuicide(b.getVertex(1, 1), BLACK) }
+    assertResult(true) {
+      b.isSuicide(b.getVertex(3, 3), BLACK)
+    }
+    assertResult(true) {
+      b.isSuicide(b.getVertex(4, 4), BLACK)
+    }
+    assertResult(false) {
+      b.isSuicide(b.getVertex(4, 2), BLACK)
+    }
+    assertResult(true) { b.isSuicide(b.getVertex(4, 4), BLACK) }
+  }
+
   test("calcAreaScore on 5x5") {
     val b = createSemiFilled5x5Board()
     assertResult(-3.5) { b.areaScore(6.5F) }
