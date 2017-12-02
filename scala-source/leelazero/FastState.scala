@@ -28,9 +28,10 @@ class FastState(val size: Short, val komi: Float) {
   }
 
   /** @return a list of valid moves */
-  def generateMoves(color: Short): Array[Short] =
+  def generateMoves(color: Byte): Seq[Short] =
     for {
-      vertex <- board.getEmpties
+      i <- 0 until board.getEmptyCount
+      vertex = board.getEmpties(i)
       if vertex != koMove && !board.isSuicide(vertex, color)
     } yield vertex
 
@@ -48,7 +49,7 @@ class FastState(val size: Short, val komi: Float) {
     playMove(board.getToMove, vertex)
   }
 
-  def playMove(color: Byte, vertex: Short): Unit = {
+  private def playMove(color: Byte, vertex: Short): Unit = {
     if (vertex != PASS && vertex != RESIGN) {
       val (km, capture) = board.updateBoard(color, vertex)
       koMove = km
@@ -65,26 +66,26 @@ class FastState(val size: Short, val komi: Float) {
   }
 
   def getMoveNum: Int = moveNum
-  def estimateMsScore: Int = board.estimateMcScore(komi + handicap)
+  def estimateMcScore: Int = board.estimateMcScore(komi + handicap)
   def getToMove: Byte = board.getToMove
   def setToMove(tomove: Byte) { board.setToMove(tomove) }
   def getHandicap: Short = handicap
   def setHandicap(h: Short) { handicap = h }
-  def getLastMove: Short = lastMove.head
-  def getPrevLastMove: Short = lastMove(1)
+  def getLastMove: Short = if (lastMove.isEmpty) -1 else lastMove.head
+  def getPrevLastMove: Short = if (lastMove.length > 1) lastMove(1) else -1
   def finalScore: Float = board.areaScore(komi + handicap)  // workstate?
-  def getKomi: Float = komi
   def getKoMove: Short = koMove
+  def getVertex(x: Short, y: Short): Short = board.getVertex(x, y)
 
   def displayState(): Unit = {
-    myPrint(f"\nPasses: $passes%d            Black (X) Prisoners: ${board.getPrisoners(BLACK)}%d\n")
+    myPrint(f"\nPasses: $passes%d")
+    myPrint(f"Black (X) Prisoners: ${board.getPrisoners(BLACK)}%d")
+    myPrint(f"White (O) Prisoners: ${board.getPrisoners(WHITE)}%d")
     if (board.blackToMove()) {
       myPrint("Black (X) to move")
     } else {
       myPrint("White (O) to move")
     }
-    myPrint(s"    White (O) Prisoners: ${board.getPrisoners(WHITE)}%d\n")
-
     board.displayBoard(getLastMove)
   }
 

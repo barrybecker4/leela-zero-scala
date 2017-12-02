@@ -38,8 +38,8 @@ class FullBoard(size: Short = MAX_BOARD_SIZE) extends FastBoard(size) {
 
       removeNeighbor(pos, color)
 
-      emptyIdx(pos) = emptyCount
-      emptySquare(emptyCount) = pos
+      emptyIdices(pos) = emptyCount
+      emptySquares(emptyCount) = pos
       emptyCount += 1
 
       hash ^= zobrist.zobrist(square(pos))(pos)
@@ -159,9 +159,9 @@ class FullBoard(size: Short = MAX_BOARD_SIZE) extends FastBoard(size) {
 
     /* move last vertex in list to our position */
     emptyCount -= 1
-    val lastvertex = emptySquare(emptyCount)
-    emptyIdx(lastvertex) = emptyIdx(i)
-    emptySquare(emptyIdx(i)) = lastvertex
+    val lastvertex = emptySquares(emptyCount)
+    emptyIdices(lastvertex) = emptyIdices(i)
+    emptySquares(emptyIdices(i)) = lastvertex
 
     /* check whether we still live (i.e. detect suicide) */
     if (stringLiberties(parentString(i)) == 0) {

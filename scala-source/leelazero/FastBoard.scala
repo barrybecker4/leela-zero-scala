@@ -57,11 +57,11 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
   protected var neighbors: Array[Int] = _       // counts of neighboring stones
   protected var directions: Array[Int] = _      // movement in 4 directions
   protected var extraDirections: Array[Int] = _ // movement in 8 directions
-  protected var prisoners: Array[Int] = _     // prisoners per color
-  protected var totalStones: Array[Int] = _   // total stones per color
-  private var critical: Seq[Short] = Seq()  // queue of critical points  (use dropRight to pop)
-  protected var emptySquare: Array[Short] = _ // empty squares
-  protected var emptyIdx: Array[Int] = _      // indices of empty squares
+  protected var prisoners: Array[Int] = _       // prisoners per color
+  protected var totalStones: Array[Int] = _     // total stones of a color on the board
+  private var criticalPoints: Seq[Short] = Seq() // queue of critical points  (use dropRight to pop)
+  protected var emptySquares: Array[Short] = _  // empty squares
+  protected var emptyIdices: Array[Int] = _     // indices of empty squares
   protected var emptyCount: Int = _
   protected var toMove: Byte = _
   protected var maxSq: Short = _
@@ -81,7 +81,8 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
 
   def validVertex(vertex: Short): Boolean = vertex >= 0 && vertex < maxSq
   def getVertex(x: Int, y: Int): Short = getVertex(x.toShort, y.toShort)
-  def getEmpties = emptySquare
+  def getEmpties: Array[Short] = emptySquares
+  def getEmptyCount: Int = emptyCount
 
   /** @return the x,y coordinate from the 1D index */
   def getXY(vertex: Short): Point = {
@@ -123,9 +124,9 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     extraDirections = Array.ofDim[Int](8)
     prisoners = Array.ofDim[Int](2)
     totalStones = Array.ofDim[Int](2)
-    critical = Seq()
-    emptySquare = Array.ofDim[Short](maxSq)
-    emptyIdx = Array.ofDim[Int](maxSq)
+    criticalPoints = Seq()
+    emptySquares = Array.ofDim[Short](maxSq)
+    emptyIdices = Array.ofDim[Int](maxSq)
     fbs = new FastBoardSerializer(this)
     initializeAfterReset()
   }
@@ -171,8 +172,8 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
         val vertex: Short = getVertex(i, j)
 
         square(vertex) = EMPTY
-        emptyIdx(vertex) = emptyCount
-        emptySquare(emptyCount) = vertex
+        emptyIdices(vertex) = emptyCount
+        emptySquares(emptyCount) = vertex
         emptyCount = (emptyCount + 1).toShort
 
         if (i == 0 || i == boardSize - 1) initializeOnBorder(vertex) else initializeCenterPoint(vertex)
@@ -283,7 +284,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     var wsc = totalStones(WHITE)
 
     for (v <- 0 until maxempty) {
-      val i = emptySquare(v)
+      val i = emptySquares(v)
       assert(square(i) == EMPTY)
 
       val allBlack = ((neighbors(i) >> (NBR_SHIFT * BLACK)) & 7) == 4
@@ -361,9 +362,9 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
 
     // move last vertex in list to our position
     emptyCount -= 1
-    val lastVertex = emptySquare(emptyCount)
-    emptyIdx(lastVertex) = emptyIdx(vertex)
-    emptySquare(emptyIdx(vertex)) = lastVertex
+    val lastVertex = emptySquares(emptyCount)
+    emptyIdices(lastVertex) = emptyIdices(vertex)
+    emptySquares(emptyIdices(vertex)) = lastVertex
     assert(countStringLiberties(vertex) < boardSize * boardSize)
 
     /* check whether we still live (i.e. detect suicide) */
@@ -517,8 +518,8 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
 
       removeNeighbor(pos, color)
 
-      emptyIdx(pos) = emptyCount
-      emptySquare(emptyCount) = pos
+      emptyIdices(pos) = emptyCount
+      emptySquares(emptyCount) = pos
       emptyCount += 1
 
       removed += 1
@@ -621,9 +622,9 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
 
     // move last vertex in list to our position
     emptyCount -= 1
-    val lastVertex = emptySquare(emptyCount)
-    emptyIdx(lastVertex) = emptyIdx(i)
-    emptySquare(emptyIdx(i)) = lastVertex
+    val lastVertex = emptySquares(emptyCount)
+    emptyIdices(lastVertex) = emptyIdices(i)
+    emptySquares(emptyIdices(i)) = lastVertex
     prisoners(color) += capturedStones
 
     // possibility of ko

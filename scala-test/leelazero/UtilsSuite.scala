@@ -4,6 +4,7 @@ import java.io.{ByteArrayOutputStream, OutputStream}
 
 import org.scalatest.FunSuite
 
+
 class UtilsSuite extends FunSuite {
 
   val out = new ByteArrayOutputStream()

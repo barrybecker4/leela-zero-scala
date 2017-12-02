@@ -100,9 +100,21 @@ class FastBoardSuite extends FunSuite {
   test("Count real liberties on 5x5") {
     val b = createSemiFilled5x5Board()
     val vertices = Array(
-      b.getVertex(1, 1), b.getVertex(2, 1), b.getVertex(3, 1), b.getVertex(4, 1), b.getVertex(2, 2), b.getVertex(3, 2), b.getVertex(0, 3)
+      b.getVertex(1, 1), b.getVertex(2, 1), b.getVertex(3, 1), b.getVertex(4, 1),
+      b.getVertex(2, 2), b.getVertex(3, 2), b.getVertex(0, 3)
     )
-    assertResult("4, 4, 2, 16376, 5, 2, 3") {   // 16376 used for black spaces?
+    assertResult("4, 4, 2, 16376, 5, 2, 3") {   // 16376 used for blank spaces
+      vertices.map(v => b.countStringLiberties(v)).mkString(", ")
+    }
+  }
+
+  test("Count real liberties on 9x9") {
+    val b = createSemiFilled9x9Board()
+    val vertices = Array(
+      b.getVertex(0, 0), b.getVertex(1, 2),  b.getVertex(4, 3), b.getVertex(4, 4), b.getVertex(5, 4)
+    )
+    b.displayBoard()
+    assertResult("2, 7, 4, 16373, 4") {   // 16376 used for blank spaces
       vertices.map(v => b.countStringLiberties(v)).mkString(", ")
     }
   }
@@ -331,6 +343,35 @@ class FastBoardSuite extends FunSuite {
     b.updateBoardFast(0, 3, BLACK)
     b.updateBoardFast(2, 3, WHITE)
     b.updateBoardFast(2, 4, WHITE)
+    b
+  }
+
+  /**
+    a b c d e f g h j
+ 9 . . . . . . . . .  9
+ 8 . . . . . . . . .  8
+ 7 . . + . + . O . .  7
+ 6 . . . . O . . . .  6
+ 5 . . + . + O + . .  5
+ 4 . . X . O . O . .  4
+ 3 . X X . + O + . .  3
+ 2 . . . . . . . . .  2
+ 1 X . . . . . . . .  1
+   a b c d e f g h j
+   */
+  protected def createSemiFilled9x9Board(): FastBoard = {
+    val b = createBoard(9)
+    b.updateBoardFast(WHITE, b.getVertex(5, 4))
+    b.updateBoardFast(BLACK, b.getVertex(5, 3))
+    b.updateBoardFast(WHITE, b.getVertex(4, 5))
+    b.updateBoardFast(BLACK, b.getVertex(2, 2))
+    b.updateBoardFast(WHITE, b.getVertex(4, 3))
+    b.updateBoardFast(BLACK, b.getVertex(1, 2))
+    b.updateBoardFast(WHITE, b.getVertex(6, 3))
+    b.updateBoardFast(BLACK, b.getVertex(2, 3))
+    b.updateBoardFast(WHITE, b.getVertex(5, 2))
+    b.updateBoardFast(BLACK, b.getVertex(0, 0))
+    b.updateBoardFast(WHITE, b.getVertex(6, 6))
     b
   }
 
