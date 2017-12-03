@@ -119,7 +119,6 @@ class SgfTree {
 
 /**
 
-
 void SGFTree::populate_states(void) {
     PropertyMap::iterator it;
     bool valid_size = false;

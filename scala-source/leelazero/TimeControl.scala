@@ -70,25 +70,26 @@ class TimeControl(boardSize: Short, mainTime: Int = HOUR, byoTime: Int = 0, byoS
   /** Note this is constant as we play, so it's fair to underestimate quite a bit. */
   def setBoardSize(size: Short): Unit = movesExpected = (size * size) / 5
   def getRemainingTime(color: Int): Int = remainingTime(color)
+  override def toString: String = Array[Byte](0, 1).map(serializeForPlayer).mkString("\n")
+  def displayTimes(): Unit = for (i <- 0 to 1) myPrint(serializeForPlayer(i.toByte))
 
-  def displayTimes(): Unit = {
-    for (i <- 0 to 1) {
-      var remaining: Int = remainingTime(i) / 100 // centiseconds to seconds
-      val hours: Int = remaining / (60 * 60)
-      remaining %= (60 * 60)
-      val minutes: Int = remaining / 60
-      val seconds = remaining % 60
+  private def serializeForPlayer(color: Byte): String = {
+    var remaining: Int = remainingTime(color) / 100 // centiseconds to seconds
+    val hours: Int = remaining / (60 * 60)
+    remaining %= (60 * 60)
+    val minutes: Int = remaining / 60
+    val seconds = remaining % 60
 
-      myPrint(f"Black time: $hours%02d:$minutes%02d:$seconds%02d")
-      if (inByo(i)) {
-        if (byoStones > 0) {
-          myPrint(f", ${stonesLeft(i)}%d stones left")
-        } else if (byoPeriods > 0) {
-          myPrint(f", ${periodsLeft(i)}%d period(s) of ${byoTime / 100}%d seconds left")
-        }
+    val colorStr = if (color == 0) "Black" else "White"
+    var s = f"$colorStr time: $hours%02d:$minutes%02d:$seconds%02d"
+    if (inByo(color)) {
+      if (byoStones > 0) {
+        s += f", ${stonesLeft(color)}%d stones left"
+      } else if (byoPeriods > 0) {
+        s += f", ${periodsLeft(color)}%d period(s) of ${byoTime / 100}%d seconds left"
       }
-      myPrint("\n")
     }
+    s
   }
 
   /** @return time allowed for move in centiseconds */
