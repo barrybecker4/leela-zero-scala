@@ -76,6 +76,7 @@ class FastState(val size: Short, val komi: Float) {
   def finalScore: Float = board.areaScore(komi + handicap)  // workstate?
   def getKoMove: Short = koMove
   def getVertex(x: Short, y: Short): Short = board.getVertex(x, y)
+  def getBoard: FullBoard = board
 
   def getHash: Long = board.getHash
   def getKoHash: Long = board.getKoHash

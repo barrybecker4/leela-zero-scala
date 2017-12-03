@@ -13,6 +13,8 @@ class KoState(val size: Short, val komi: Float) {
   def superKo(): Boolean = koHashHistory.tail.dropRight(1).contains(state.getKoHash)
   def superKo(newHash: Long): Boolean = koHashHistory.dropRight(1).contains(newHash)
   def getKoHash: Long = state.getKoHash
+  def getToMove: Byte = state.getToMove
+  def getBoard: FullBoard = state.getBoard
 
   def resetGame(): Unit = {
     state.resetGame()
