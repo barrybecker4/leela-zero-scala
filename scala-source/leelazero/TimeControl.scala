@@ -13,7 +13,8 @@ object TimeControl {
 }
 
 /**  Timing info is per GTP and in centiseconds */
-class TimeControl(boardSize: Short, mainTime: Int = HOUR, byoTime: Int = 0, byoStones: Int = 25, byoPeriods: Int = 0) {
+case class TimeControl(boardSize: Short,
+                       mainTime: Int = HOUR, byoTime: Int = 0, byoStones: Int = 25, byoPeriods: Int = 0) {
   private var movesExpected: Int = 0
 
   private val remainingTime = Array.ofDim[Int](2) // main time per player
@@ -23,6 +24,10 @@ class TimeControl(boardSize: Short, mainTime: Int = HOUR, byoTime: Int = 0, byoS
   private val times = Array.ofDim[Long](2) // storage for player times
   resetClocks()
   setBoardSize(boardSize)
+
+  def this(tc: TimeControl) {
+    this(tc.boardSize, tc.mainTime, tc.byoTime, tc.byoStones, tc.byoPeriods)
+  }
 
   def resetClocks(): Unit = {
     for (i <- 0 to 1) {

@@ -3,14 +3,36 @@ package leelazero
 import FastBoardSerializer.{PASS, RESIGN}
 import FastBoard.{BLACK, WHITE, EMPTY}
 
-// placeholder for now
-class GameHistory(size: Short, komi: Float) {
+/** Keeps track of all the moves played for this game */
+class GameHistory() {
 
-  private var currentState: KoState = new KoState(size, komi)
+  private var currentState: KoState = _
   private var gameHistory: Seq[KoState] = Seq()
-  gameHistory :+= currentState
-  private var timeControl: TimeControl = new TimeControl(size)
+  private var timeControl: TimeControl = _
   private var moveNum = 0
+
+  def initHistory(size: Short, komi: Float) {
+    currentState = new KoState(size, komi)
+    gameHistory = Seq(currentState)
+    timeControl = new TimeControl(size)
+    moveNum = 0
+  }
+
+  def initHistory(state: KoState) {
+    currentState = state.copy()
+    gameHistory = Seq(currentState)
+    timeControl = new TimeControl(state.size)
+    moveNum = 0
+  }
+
+  def copy(): GameHistory = {
+    val newGhist = new GameHistory
+    newGhist.gameHistory = gameHistory.map(_.copy())
+    newGhist.currentState = gameHistory(moveNum)
+    newGhist.timeControl = new TimeControl(timeControl)
+    newGhist.moveNum = moveNum
+    newGhist
+  }
 
   def getCurrentState: KoState = currentState
 

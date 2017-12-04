@@ -33,6 +33,11 @@ object FastBoard {
   )
 
   def calcMaxSquare(size: Short): Short = ((size + 2) * (size + 2)).toShort
+
+  def otherColor(color: Byte): Byte =
+    if (color == BLACK) WHITE
+    else if (color == WHITE) BLACK
+    else throw new IllegalStateException("Unexpected color: " + color)
 }
 
 /**
@@ -496,11 +501,6 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
       }
     }
   }
-
-  protected def otherColor(color: Byte): Byte =
-    if (color == BLACK) WHITE
-    else if (color == WHITE) BLACK
-    else throw new IllegalStateException("Unexpected color: " + color)
 
   /** @return the number of stones in the string that was removed */
   protected def removeStringFast(vertex: Short): Int = {
