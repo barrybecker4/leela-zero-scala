@@ -52,6 +52,24 @@ class FullBoard(size: Short = MAX_BOARD_SIZE) extends FastBoard(size) {
     removed
   }
 
+  def copy(): FullBoard = {
+    val cp = new FullBoard(size)
+    cp.emptyIdices = this.emptyIdices
+    cp.emptyCount = this.emptyCount
+    cp.parentString = this.parentString
+    cp.stringLiberties = this.stringLiberties
+    cp.stonesInString = this.stonesInString
+    cp.neighbors = this.neighbors
+    cp.next = this.next
+    cp.prisoners = this.prisoners
+    cp.totalStones = this.totalStones
+    cp.toMove = this.toMove
+    cp.hash = this.getHash
+    cp.koHash = this.getKoHash
+    cp.zobrist = this.zobrist
+    cp
+  }
+
   /** @return Tromp-Taylor has positional superko value */
   def calcKoHash(): Long = {
     koHash = calcBaseHash()

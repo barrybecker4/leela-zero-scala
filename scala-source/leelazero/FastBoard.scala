@@ -196,7 +196,6 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
 
     for (k <- 0 until 4) {
       val ai = (vertex + directions(k)).toShort
-
       val libs = countStringLiberties(ai)
       if (getSquare(ai) == color) {
         if (libs > 1) {

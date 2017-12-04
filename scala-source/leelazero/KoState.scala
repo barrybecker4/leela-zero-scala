@@ -3,44 +3,53 @@ package leelazero
 import FastBoardSerializer.{PASS, RESIGN}
 
 /** maintains Zobrist hash history in order to detect supoer kos */
-class KoState(val size: Short, val komi: Float) {
+class KoState(size: Short, komi: Float, fboard: FullBoard = null) extends FastState(size, komi, fboard) {
   assert(size < FastBoard.MAX_BOARD_SIZE)
-  private val state = new FastState(size, komi)
-  private var koHashHistory: Seq[Long] = Seq(state.calcKoHash)
-  private var hashHistory: Seq[Long] = Seq(state.calcHash)
+  private var koHashHistory: Seq[Long] = Seq(calcKoHash)
+  private var hashHistory: Seq[Long] = Seq(calcHash)
 
   /** @return true if there is a superKo. IOW if the koHash repeats in the history */
-  def superKo(): Boolean = koHashHistory.tail.dropRight(1).contains(state.getKoHash)
+  def superKo(): Boolean = koHashHistory.tail.dropRight(1).contains(getKoHash)
   def superKo(newHash: Long): Boolean = koHashHistory.dropRight(1).contains(newHash)
-  def getKoHash: Long = state.getKoHash
-  def getToMove: Byte = state.getToMove
-  def getBoard: FullBoard = state.getBoard
 
-  def resetGame(): Unit = {
-    state.resetGame()
-    koHashHistory = Seq(state.calcKoHash)
-    hashHistory = Seq(state.calcHash)
+  override def resetGame(): Unit = {
+    super.resetGame()
+    koHashHistory = Seq(calcKoHash)
+    hashHistory = Seq(calcHash)
   }
 
-  def playPass(): Unit = {
-    state.playPass()
-    updateHistory()
-  }
+  def playMove(color: Byte, x: Short, y: Short): Unit = playMove(color, super.getVertex(x, y))
 
-  def playMove(vertex: Short): Unit = state.playMove(vertex)
-
-  def playMove(color: Byte, x: Short, y: Short): Unit = playMove(color, state.getVertex(x, y))
-  def playMove(color: Byte, vertex: Short): Unit = {
+  override def playMove(color: Byte, vertex: Short): Unit = {
     if (vertex != PASS && vertex != RESIGN) {
-      state.playMove(color, vertex)
+      super.playMove(color, vertex)
       updateHistory()
     } else {
       playPass()
     }
   }
 
+  override def playPass(): Unit = {
+    super.playPass()
+    updateHistory()
+  }
+
+  def copy(): KoState = {
+    val cp = new KoState(size, komi, board.copy())
+    cp.setToMove(this.getToMove)
+    cp.setHandicap(this.getHandicap)
+    cp.passes = this.passes
+    cp.moveNum = this.moveNum
+    cp.koMove = this.koMove
+    cp.lastMoves = this.lastMoves
+    cp.lastWasCapture = this.lastWasCapture
+    cp.hashHistory = this.hashHistory
+    cp.koHashHistory = this.koHashHistory
+    cp
+  }
+
   private def updateHistory(): Unit = {
-    koHashHistory :+= state.getKoHash
-    hashHistory :+= state.getHash
+    koHashHistory :+= getKoHash
+    hashHistory :+= getHash
   }
 }

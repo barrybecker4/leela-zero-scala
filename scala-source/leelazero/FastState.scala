@@ -3,19 +3,25 @@ package leelazero
 import Utils._
 import FastBoardSerializer.{PASS, RESIGN}
 import FastBoard.{BLACK, WHITE}
+import FastState.NUM_RECENT_MOVES
+
+object FastState {
+  /** Number of rence moves to remember */
+  val NUM_RECENT_MOVES = 16
+}
 
 /**
   * Maintains the state of the board
   */
-class FastState(val size: Short, val komi: Float) {
+class FastState(val size: Short, val komi: Float, val fboard: FullBoard = null) {
 
-  private val board: FullBoard = new FullBoard(size)
-  private var moveNum: Int = 0
-  private var handicap: Short = 0
-  private var passes: Int = 0
-  private var koMove: Short = 0
-  private var lastWasCapture = false
-  private var lastMove: Array[Short] = Array[Short]()
+  val board: FullBoard = if (fboard == null) new FullBoard(size) else fboard
+  protected var moveNum: Int = 0
+  protected var handicap: Short = 0
+  protected var passes: Int = 0
+  protected var koMove: Short = 0
+  protected var lastWasCapture = false
+  protected var lastMoves: Array[Short] = Array[Short]()
 
   def resetGame(): Unit = {
     board.resetBoard(size)
@@ -23,7 +29,7 @@ class FastState(val size: Short, val komi: Float) {
     handicap = 0
     passes = 0
     koMove = 0
-    for (i <- lastMove.indices) lastMove(i) = 0
+    for (i <- lastMoves.indices) lastMoves(i) = 0
     lastWasCapture = false
   }
 
@@ -71,8 +77,8 @@ class FastState(val size: Short, val komi: Float) {
   def setToMove(tomove: Byte) { board.setToMove(tomove) }
   def getHandicap: Short = handicap
   def setHandicap(h: Short) { handicap = h }
-  def getLastMove: Short = if (lastMove.isEmpty) -1 else lastMove.head
-  def getPrevLastMove: Short = if (lastMove.length > 1) lastMove(1) else -1
+  def getLastMove: Short = if (lastMoves.isEmpty) -1 else lastMoves.head
+  def getPrevLastMove: Short = if (lastMoves.length > 1) lastMoves(1) else -1
   def finalScore: Float = board.areaScore(komi + handicap)  // workstate?
   def getKoMove: Short = koMove
   def getVertex(x: Short, y: Short): Short = board.getVertex(x, y)
@@ -95,10 +101,15 @@ class FastState(val size: Short, val komi: Float) {
     board.displayBoard(getLastMove)
   }
 
+  def resign(): Unit = {
+    pushLastMove(RESIGN)
+    lastWasCapture = false
+  }
+
   private def pushLastMove(vertex: Short): Unit = {
     // just keep the last 15 moves
-    lastMove = lastMove.take(15)
-    lastMove = vertex +: lastMove
+    lastMoves = lastMoves.take(NUM_RECENT_MOVES - 1)
+    lastMoves = vertex +: lastMoves
   }
 
   private def incrementPasses(): Unit = {

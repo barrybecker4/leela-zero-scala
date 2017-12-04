@@ -13,20 +13,21 @@ object SgfTree {
 class SgfTree {
 
   private var initialized = false
-  private var koState: KoState = _
+
+  private var gameHistory: GameHistory = _
   private var winner: Byte = FastBoard.INVALID // no winner initially
   private var children: Seq[SgfTree] = Seq()
   private var properties: Map[String, String] = _
 
   /** Initialize defaults. The SGF might be missing boardsize or komi which means we'll never initialize properly */
   def initState(): Unit = {
-    koState = new GameState(19, 7.5f)
+      gameHistory = new GameHistory(19, 7.5f)
     initialized = true
   }
 
   def getState: KoState = {
     assert(initialized)
-    koState
+    gameHistory.getCurrentState
   }
 
   def getChild(count: Short): SgfTree = {
@@ -37,13 +38,13 @@ class SgfTree {
   }
 
   /**
-    * This follows the entire line, and doesn't really need the intermediate states,
-    * just the moves. As a consequence, states that contain more than just moves won't have any effect.
+    * This follows the entire line, and doesn't really need the intermediate states, just the moves.
+    * As a consequence, states that contain more than just moves won't have any effect.
     */
-  def followMainlineState(movenum: Int): GameState = {
+  def followMainlineState(movenum: Int): KoState = {
     var link: SgfTree = this
     // This initializes a starting state from a KoState and sets up the game history.
-    val result: GameState = getState.asInstanceOf[GameState]
+    val result: KoState = getState
 
     var i = 0
     while (i <= movenum && link != null) {
@@ -113,6 +114,7 @@ class SgfTree {
   def populateStates(): SgfTree = {
     null // long method
   }
+
 
   def getMove(toMove: Byte): Short = EOT   // FIXME
 }
