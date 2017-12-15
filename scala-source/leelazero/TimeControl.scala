@@ -1,6 +1,6 @@
 package leelazero
 
-import TimeControl._
+import TimeControl.{HOUR, MONTH, BUFFER_CENTISECS}
 import Timing._
 import Utils._
 

@@ -287,7 +287,6 @@ class SgfTree {
   def addChild(): Unit = {
     val tree = new SgfTree()
     children :+= tree
-    tree
   }
 
   def getMove(toMove: Byte): Short = {

@@ -2,10 +2,160 @@ description = 'Leela Zero in Scala'
 group = 'com.barrybecker4'
 version = '0.1'
 
-apply from: 'https://raw.github.com/barrybecker4/bb4-common/master/bb4.gradle'
+apply plugin: 'java'
+apply plugin: 'scala'
+sourceCompatibility = '1.8'
+targetCompatibility = '1.8'
+apply plugin: 'project-report'
+apply plugin: 'application'
+apply plugin: 'idea'
+apply plugin: 'eclipse'
+apply plugin: 'maven'
+defaultTasks 'build'
 
 project.archivesBaseName = 'leela-zero-scala'
 mainClassName = 'leelazero.FastBoard'
+
+ext {
+    scalaVersion = '2.11.6'
+    jCudaVersion = "0.8.0"
+}
+
+sourceSets {
+    main {
+        java {
+            srcDir 'source'
+        }
+        scala {
+            srcDir 'scala-source'
+        }
+        resources {
+            srcDirs 'source', 'scala-source'
+        }
+    }
+    test {
+        java {
+            srcDir 'test'
+        }
+        scala {
+            srcDir 'scala-test'
+        }
+        resources {
+            srcDirs 'test', 'scala-test'
+        }
+    }
+}
+
+// Scalaxy/Reified snapshots are published on the Sonatype repository.
+//resolvers += Resolver.sonatypeRepo("snapshots")
+repositories {
+    mavenCentral()
+    // this is where bb4 release artifacts will come from
+    maven { url "http://repo1.maven.org/maven2/" }
+    // this is where SNAPSHOT releases will come from
+    maven { url "https://oss.sonatype.org/content/groups/staging" }
+    // some thirdparty jars from here
+    maven { url "https://repository.jboss.org/nexus/content/repositories/thirdparty-releases" }
+}
+
+/**
+ * Methods to determine the operating system (OS) and architecture (Arch) of the system.
+ * These strings are used to determine the classifier of the artifact that contains the
+ * native libraries. For example, when the operating system is "windows" and the
+ * architecture is "x86_64", then the classifier will be "windows-x86_64", and thus,
+ * the JAR file containing the native libraries will be
+ * jcuda-natives-windows-x86_64-0.8.0.jar
+ * These methods are taken from
+ * https://github.com/jcuda/jcuda/blob/master/JCudaJava/src/main/java/jcuda/LibUtils.java
+ */
+def static getOsString() {
+    String vendor = System.getProperty("java.vendor");
+    if ("The Android Project" == vendor) {
+        return "android";
+    } else {
+        String osName = System.getProperty("os.name");
+        osName = osName.toLowerCase(Locale.ENGLISH);
+        if (osName.startsWith("windows")) {
+            return "windows";
+        } else if (osName.startsWith("mac os")) {
+            return "apple";
+        } else if (osName.startsWith("linux")) {
+            return "linux";
+        } else if (osName.startsWith("sun")) {
+            return "sun"
+        }
+        return "unknown"
+    }
+}
+
+def static getArchString() {
+    String osArch = System.getProperty("os.arch");
+    osArch = osArch.toLowerCase(Locale.ENGLISH);
+    if ("i386" == osArch || "x86" == osArch || "i686" == osArch) {
+        return "x86";
+    } else if (osArch.startsWith("amd64") || osArch.startsWith("x86_64")) {
+        return "x86_64";
+    } else if (osArch.startsWith("arm64")) {
+        return "arm64";
+    } else if (osArch.startsWith("arm")) {
+        return "arm";
+    } else if ("ppc" == osArch || "powerpc" == osArch) {
+        return "ppc";
+    } else if (osArch.startsWith("ppc")) {
+        return "ppc_64";
+    } else if (osArch.startsWith("sparc")) {
+        return "sparc";
+    } else if (osArch.startsWith("mips64")) {
+        return "mips64";
+    } else if (osArch.startsWith("mips")) {
+        return "mips";
+    } else if (osArch.contains("risc")) {
+        return "risc";
+    }
+    return "unknown";
+}
+
+dependencies {
+    compile fileTree(include: ['*.jar'], dir: 'libs')
+
+    // Add your other dependencies here:
+    // Scala dependencies
+    compile("org.scala-lang:scala-library:$scalaVersion") { force = true }
+    testCompile 'org.scalatest:scalatest_2.11:3.0.1'
+    // Used to generate html unit test report (consider switching to flexmark)
+    testRuntime 'org.pegdown:pegdown:1.6.0'
+
+    compile 'org.scalanlp:breeze_2.11:0.13.2'
+    compile 'org.scalanlp:breeze-natives_2.11:0.13.2'
+    //compile 'com.nativelibs4java:scalacl:0.3-SNAPSHOT'
+
+    compile 'org.jocl:jocl:2.0.0'
+    compile 'org.jocl:jocl-blast:1.2.0'
+
+    // JCuda dependencies are below
+    def classifier = getOsString() + "-" + getArchString()
+
+    // JCuda Java libraries
+    compile(group: 'org.jcuda', name: 'jcuda', version: jCudaVersion) { transitive = false }
+    compile(group: 'org.jcuda', name: 'jcublas', version: jCudaVersion) { transitive = false }
+    compile(group: 'org.jcuda', name: 'jcufft', version: jCudaVersion) { transitive = false }
+    compile(group: 'org.jcuda', name: 'jcusparse', version: jCudaVersion) { transitive = false }
+    compile(group: 'org.jcuda', name: 'jcurand', version: jCudaVersion) { transitive = false }
+
+    // JCuda native libraries
+    compile group: 'org.jcuda', name: 'jcuda-natives', classifier: classifier, version: jCudaVersion
+    compile group: 'org.jcuda', name: 'jcublas-natives', classifier: classifier, version: jCudaVersion
+    compile group: 'org.jcuda', name: 'jcufft-natives', classifier: classifier, version: jCudaVersion
+    compile group: 'org.jcuda', name: 'jcusparse-natives', classifier: classifier, version: jCudaVersion
+    compile group: 'org.jcuda', name: 'jcurand-natives', classifier: classifier, version: jCudaVersion
+
+    // For MKL libs. Do we need it?
+    compile group: 'org.bytedeco.javacpp-presets', name: 'mkl-platform', version: '2017.3-1.3'
+    compile group: 'org.bytedeco.javacpp-presets', name: 'mkl', version: '2017.3-1.3'
+    //compile 'org.bytedeco.javacpp-presets:mkl-platform:2018.1-1.3.4-SNAPSHOT'
+    //compile 'org.bytedeco.javacpp-presets.mkl:mkl:1.3.4-SNAPSHOT'
+}
+
 
 jar {
     archiveName = "${archivesBaseName}-${version}.jar"

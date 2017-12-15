@@ -27,4 +27,10 @@ class UtilsSuite extends FunSuite {
     val a2 = 0xABCDABCDABCDABCDL
     assertResult(-6067004223159161907L) { a2 }
   }
+
+  test("left shift Short") {
+    val nopass: Int = 1 << 0
+    val noresign: Int = 1 << 1
+    println("nopass= "+ nopass + " noresign=" + noresign)
+  }
 }

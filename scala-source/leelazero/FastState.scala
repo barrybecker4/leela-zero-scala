@@ -83,6 +83,7 @@ class FastState(val size: Short, val komi: Float, val fboard: FullBoard = null) 
   def getKoMove: Short = koMove
   def getVertex(x: Short, y: Short): Short = board.getVertex(x, y)
   def getBoard: FullBoard = board
+  def getPasses: Int = passes
 
   def getHash: Long = board.getHash
   def getKoHash: Long = board.getKoHash

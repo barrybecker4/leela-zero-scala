@@ -1,63 +1,51 @@
 package leelazero
 
 /** Transposition entry */
-class TTEntry {
+class TTEntry() {
   var hash: Long = 0
   var visits: Int = 0
   var evalSum: Double = 0.0
 }
 
-//object TTable {
-//  val TRANS_TABLE: TTable = new TTable(size)
-//}
+
+object TTable {
+  val TRANS_TABLE: TTable = new TTable()
+}
 
 /** Transposition table */
 class TTable(size: Int = 500000) {
-  val komi: Float = 0
-  var buckets: Seq[TTEntry] = Seq()
+  var komi: Float = 0
+  var buckets: Array[TTEntry] = Array.ofDim[TTEntry](size)
 
-  //def update(has: Long, komi: Float, node: UctNode) = {
-  //}
-}
+  def update(hash: Long, komi: Float, node: UctNode): Unit = this.synchronized {
+    var index: Int = hash.toInt
+    index %= buckets.length
 
-/**
-void TTable::update(uint64 hash, const float komi, const UCTNode * node) {
-    LOCK(m_mutex, lock);
+    // update TT
+    buckets(index).hash = hash
+    buckets(index).visits = node.visits    //getVisits()
+    buckets(index).evalSum = node.blackEvals  // getBlackEvals()
 
-    unsigned int index = (unsigned int)hash;
-    index %= m_buckets.size();
-
-  /* update TT  */
-    m_buckets[index].m_hash       = hash;
-    m_buckets[index].m_visits     = node->get_visits();
-    m_buckets[index].m_eval_sum   = node->get_blackevals();
-
-    if (m_komi != komi) {
-        std::fill(begin(m_buckets), end(m_buckets), TTEntry());
-        m_komi = komi;
+    if (this.komi != komi) {
+      buckets = Array.ofDim[TTEntry](buckets.length)
+      this.komi = komi
     }
-}
+  }
 
-void TTable::sync(uint64 hash, const float komi, UCTNode * node) {
-    LOCK(m_mutex, lock);
+  def sync(hash: Long, komi: Float, node: UctNode): Unit = this.synchronized {
+    var index: Int = hash.toInt
+    index %= buckets.length
 
-    unsigned int index = (unsigned int)hash;
-    index %= m_buckets.size();
-
-    /* check for hash fail  */
-    if (m_buckets[index].m_hash != hash || m_komi != komi) {
-        return;
+    // check for hash fail
+    if (buckets(index).hash != hash || this.komi != komi) {
+      return
     }
 
-    /*
-        valid entry in TT should have more info than tree
-  */
-    if (m_buckets[index].m_visits > node->get_visits()) {
-        /*
-            entry in TT has more info (new node)
-  */
-        node->set_visits(m_buckets[index].m_visits);
-        node->set_blackevals(m_buckets[index].m_eval_sum);
+    // valid entry in TT should have more info than tree
+    if (buckets(index).visits > node.visits) { // getVisits()) {
+      // entry in TT has more info (new node)
+      node.visits = buckets(index).visits
+      node.blackEvals = buckets(index).evalSum
     }
+  }
 }
-*/

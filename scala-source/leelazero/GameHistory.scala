@@ -3,6 +3,7 @@ package leelazero
 import FastBoardSerializer.{PASS, RESIGN}
 import FastBoard.{BLACK, WHITE, EMPTY}
 
+
 /** Keeps track of all the moves played for this game */
 class GameHistory() {
 
@@ -228,9 +229,9 @@ class GameHistory() {
     stones = (stones - setFixedHandicap2(stones)).toShort
 
     for (i <- 0 until stones) {
-      val search = new UctSearch(this) //std::make_unique<UCTSearch>(*this);
+      val search = new UctSearch(this.getCurrentState.copy()) //std::make_unique<UCTSearch>(*this);
 
-      val move = search.think(BLACK, UctSearch.NO_PASS)
+      val move = search.think(BLACK, UctSearch.NO_PASS.toShort)
       playMove(BLACK, move)
     }
 
