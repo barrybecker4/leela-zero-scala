@@ -1,6 +1,6 @@
 package leelazero
 
-
+// Progression in copmputer go strength https://imgur.com/a/gJSaM
 object Config {
   val DEBUG = true
   val PROGRAM_NAME = "Leela-Zero-Scala"
