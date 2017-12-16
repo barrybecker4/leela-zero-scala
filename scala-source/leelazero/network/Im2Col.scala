@@ -2,7 +2,12 @@ package leelazero.network
 
 import leelazero.network.Network._
 
-
+/**
+  * This code is not used much if you have a powerful graphics card, but is for CPU only version.
+  * Here are some references to help understand what its doing and why its written this way:
+  * https://petewarden.com/2015/04/20/why-gemm-is-at-the-heart-of-deep-learning/
+  * https://arxiv.org/pdf/1410.0759.pdf
+  */
 object Im2Col {
 
   def im2Col(filterSize: Int, channels: Int, input: Seq[NetWeight], output: Array[Float]): Unit = {
