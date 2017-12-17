@@ -157,14 +157,26 @@ class FastBoardSuite extends FunSuite {
 
   test("calcAreaScore on 5x5") {
     val b = createSemiFilled5x5Board()
-    assertResult(-3.5) { b.areaScore(6.5F) }
-    assertResult(2.5) { b.areaScore(0.5F) }
+    assertResult(-6.5) { b.areaScore(6.5F) }
+    assertResult(-.5) { b.areaScore(0.5F) }
   }
 
   test("calcAreaScore on whiteField 5x5") {
     val b = create5x5AllWhiteField()
-    assertResult(-30.5) { b.areaScore(6.5F) }
-    assertResult(-24.5) { b.areaScore(0.5F) }
+    assertResult(-31.5) { b.areaScore(6.5F) }
+    assertResult(-25.5) { b.areaScore(0.5F) }
+  }
+
+  test("calcAreaScore on filled 5x5") {
+    val b = createFilled5x5Board()
+    assertResult(-6.5) { b.areaScore(6.5F) }
+    assertResult(-.5) { b.areaScore(0.5F) }
+  }
+
+  test("calcAreaScore on filled 9x9") {
+    val b = createSemiFilled9x9Board()
+    assertResult(-9.5) { b.areaScore(6.5F) }
+    assertResult(-3.5) { b.areaScore(0.5F) }
   }
 
   test("estimate MC score 5x5") {

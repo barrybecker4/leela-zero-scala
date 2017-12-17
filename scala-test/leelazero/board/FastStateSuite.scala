@@ -33,7 +33,7 @@ class FastStateSuite extends FunSuite {
     assertResult(BLACK) { state.getToMove }
 
     assertResult(-8) { state.estimateMcScore }
-    assertResult(-27.5) { state.finalScore }
+    assertResult(-33.5) { state.finalScore }
   }
 
   test("state after play (BLACK winning)") {
@@ -50,7 +50,7 @@ class FastStateSuite extends FunSuite {
     assertResult(BLACK) { state.getToMove }
 
     assertResult(-10) { state.estimateMcScore }
-    assertResult(-14.5) { state.finalScore }
+    assertResult(-11.5) { state.finalScore }
 
     assertResult(
       "12, 23, 34, 45, 56, 67, 78, 89, 100, 13, 24, 35, 46, 57, 68, 79, 90, 101, 14, 25, 36, 47, 58, " +
@@ -85,7 +85,7 @@ class FastStateSuite extends FunSuite {
     assertResult(BLACK) { state.getToMove }
 
     assertResult(-11) { state.estimateMcScore }
-    assertResult(18.5) { state.finalScore }
+    assertResult(-13.5) { state.finalScore }
 
     assertResult(
       "20, 23, 34, 45, 56, 67, 78, 89, 100, 13, 24, 53, 46, 57, 68, 79, 90, 101, 14, 25, 75, 31, 58, " +

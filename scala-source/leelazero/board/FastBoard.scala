@@ -2,6 +2,8 @@ package leelazero.board
 
 import leelazero.board.FastBoard._
 
+import scala.collection.immutable.Queue
+
 
 object FastBoard {
 
@@ -360,11 +362,8 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
           val aip = parentString(ai)
 
           if (ip != aip) {
-            if (stonesInString(ip) >= stonesInString(aip)) {
-              mergeStrings(ip, aip)
-            } else {
-              mergeStrings(aip, ip)
-            }
+            if (stonesInString(ip) >= stonesInString(aip)) mergeStrings(ip, aip)
+            else mergeStrings(aip, ip)
           }
         }
       }
@@ -387,9 +386,8 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     val ownSurrounded = (neighbors(vertex) & EYE_MASK(color)) > 0
 
     // If not, it can't be an eye. This takes advantage of borders being colored both ways.
-    if (!ownSurrounded) {
-      return false
-    }
+    if (!ownSurrounded) return false
+
 
     // 2 or more diagonals taken; 1 for side groups
     val colorcount = Array.fill[Int](4)(0)
@@ -534,33 +532,34 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     removed
   }
 
+  /**
+    * @param col side to calculate score for
+    * @return est of score for specified player
+}*/
   private def calcReachColor(col: Short): Array[Boolean] = {
     val bd = Array.fill[Boolean](maxSq)(false)
-    var last = Array.fill[Boolean](maxSq)(false)
-
-    do {  //  needs multi-pass propagation, slow
-      last = bd
-      for (i <- 0 until boardSize) {
-        for (j <- 0 until boardSize) {
-          val vertex = getVertex(i, j)
-          // colored field, spread
-          if (square(vertex) == col) {
-            bd(vertex) = true
-            for (k <- 0 until 4) {
-              if (square(vertex + directions(k)) == EMPTY) {
-                bd(vertex + directions(k)) = true
-              }
-            }
-          } else if (square(vertex) == EMPTY && bd(vertex)) {
-            for (k <- 0 until 4) {
-              if (square(vertex + directions(k)) == EMPTY) {
-                bd(vertex + directions(k)) = true
-              }
-            }
-          }
+    var open: Queue[Short] = Queue[Short]()
+    for (i <- 0 until boardSize) {
+      for (j <- 0 until boardSize) {
+        val vertex = getVertex(i, j)
+        if (square(vertex) == col) {
+          bd(vertex) = true
+          open :+= vertex
         }
       }
-    } while (last != bd)
+    }
+    while (open.nonEmpty) {
+      // colored field spread
+      val vertex = open.head
+      open = open.tail
+      for (k <- 0 until 4) {
+        val neighbor: Short = (vertex + directions(k)).toShort
+        if (!bd(neighbor) && square(neighbor) == EMPTY) {
+          bd(neighbor) = true
+          open :+= neighbor
+        }
+      }
+    }
     bd
   }
 
