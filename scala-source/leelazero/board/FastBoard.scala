@@ -535,7 +535,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
   /**
     * @param col side to calculate score for
     * @return est of score for specified player
-}*/
+    */
   private def calcReachColor(col: Short): Array[Boolean] = {
     val bd = Array.fill[Boolean](maxSq)(false)
     var open: Queue[Short] = Queue[Short]()

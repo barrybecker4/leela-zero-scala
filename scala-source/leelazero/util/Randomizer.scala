@@ -1,8 +1,8 @@
 package leelazero.util
 
 class Randomizer(theSeed: Long) {
-  val seed: Long = if (theSeed == -1) System.currentTimeMillis() ^ Thread.currentThread().getId else theSeed
-  val s: Array[Long] = Array.ofDim[Long](2)
+  private val seed: Long = if (theSeed == -1) System.currentTimeMillis() ^ Thread.currentThread().getId else theSeed
+  private val s: Array[Long] = Array.ofDim[Long](2)
   seedRandom(seed)
 
   /** This is xoroshiro128+. Note that the last bit isn't entirely random, so don't use it, if possible. */
@@ -22,9 +22,9 @@ class Randomizer(theSeed: Long) {
 
   /**
     * Magic values from Pierre L'Ecuyer.
-    * See "Tables of Linear Congruental Generators of different sizes and good lattice structure"
+    * See "Tables of Linear Congruential Generators of different sizes and good lattice structure"
     */
-  def seedRandom(sd: Long): Unit = {
+  private def seedRandom(sd: Long): Unit = {
     s(0) = 741103597 * sd
     s(1) = 741103597 * s(0)
   }
