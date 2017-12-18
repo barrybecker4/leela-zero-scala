@@ -153,7 +153,7 @@ class FastStateSuite extends FunSuite {
        | 1 O X .(X).  1
        |   a b c d e
        |
-       |Hash: d45d73afd91565f9 Ko-Hash: 97a9823d509053a3""")) {
+       |Hash: 121a4695d969bb0b Ko-Hash: dc57177b70443191""")) {
       fstate.toString
     }
   }

@@ -10,7 +10,7 @@ class FastBoardSuite extends FunSuite {
   def createBoard(size: Short = MAX_BOARD_SIZE): FastBoard = new FastBoard(size)
 
   test("Create an empty 3x3 board") {
-    val b = createBoard(3)
+    val b = new FastBoard(3)
     assertResult(clean("""
         |   a b c
         | 3 . . .  3
