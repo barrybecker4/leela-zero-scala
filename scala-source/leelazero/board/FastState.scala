@@ -14,7 +14,7 @@ object FastState {
   */
 class FastState(val size: Short, val komi: Float, val fboard: FullBoard = null) {
 
-  val board: FullBoard = if (fboard == null) new FullBoard(size) else fboard
+  private val board: FullBoard = if (fboard == null) new FullBoard(size) else fboard
   protected var moveNum: Int = 0
   protected var handicap: Short = 0
   protected var passes: Int = 0

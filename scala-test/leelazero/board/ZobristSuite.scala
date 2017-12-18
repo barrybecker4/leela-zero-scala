@@ -20,6 +20,5 @@ class ZobristSuite extends FunSuite {
     assertResult(
       "-7788122022957466439, 8345156559435542935, 6813009757636519123, 5688798515523735197, 2029477349424068609"
     ) { z.zobristPass.mkString(", ") }
-
   }
 }

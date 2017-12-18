@@ -66,14 +66,14 @@ class UctNode(var vertex: Short, var score: Float) {
 
     // DCNN returns winrate as side to move
     var netEval: Float = rawNetList._2
-    val toMove = state.board.getToMove
+    val toMove = state.getToMove
     // our search functions evaluate from black's point of view
     if (toMove == WHITE) {
       netEval = 1.0f - netEval
     }
     val eval: Float = netEval
 
-    val board: FastBoard = state.board
+    val board: FastBoard = state.getBoard
     var nodeList: Seq[ScoredNode] = null
 
     for (node <- rawNetList._1) {
