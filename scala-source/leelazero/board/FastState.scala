@@ -50,10 +50,10 @@ class FastState(val size: Short, val komi: Float, val fboard: FullBoard = null) 
     incrementPasses()
   }
 
-  def playMove(vertex: Short): Unit = {
-    playMove(board.getToMove, vertex)
-  }
+  def playMove(vertex: Short): Unit = playMove(board.getToMove, vertex)
+  def playMove(pos: (Int, Int), color: Byte): Unit = playMove(color, board.getVertex(pos._1, pos._2))
 
+  /** Play a move on the board and update the state accordingly */
   def playMove(color: Byte, vertex: Short): Unit = {
     if (vertex != PASS && vertex != RESIGN) {
       val (km, capture) = board.updateBoard(color, vertex)
@@ -88,17 +88,18 @@ class FastState(val size: Short, val komi: Float, val fboard: FullBoard = null) 
   def getKoHash: Long = board.getKoHash
   def calcHash: Long = board.calcHash()
   def calcKoHash: Long = board.calcKoHash()
+  def displayState(): Unit = myPrint(toString)
 
-  def displayState(): Unit = {
-    myPrint(f"\nPasses: $passes%d")
-    myPrint(f"Black (X) Prisoners: ${board.getPrisoners(BLACK)}%d")
-    myPrint(f"White (O) Prisoners: ${board.getPrisoners(WHITE)}%d")
+  override def toString: String = {
+    var s = f"\nPasses: $passes%d\n"
+    s += f"Black (X) Prisoners: ${board.getPrisoners(BLACK)}%d\n"
+    s += f"White (O) Prisoners: ${board.getPrisoners(WHITE)}%d\n"
     if (board.blackToMove()) {
-      myPrint("Black (X) to move")
+      s += "Black (X) to move"
     } else {
-      myPrint("White (O) to move")
+      s += "White (O) to move"
     }
-    board.displayBoard(getLastMove)
+    s + board.toString(getLastMove)
   }
 
   def resign(): Unit = {

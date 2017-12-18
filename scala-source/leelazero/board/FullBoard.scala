@@ -2,6 +2,7 @@ package leelazero.board
 
 import leelazero.board.FastBoard._
 import leelazero.board.FullBoard._
+import leelazero.util.Utils.myPrint
 
 object FullBoard {
 
@@ -208,7 +209,11 @@ class FullBoard(size: Short = MAX_BOARD_SIZE) extends FastBoard(size) {
   }
 
   override def displayBoard(lastMove: Short = -1): Unit = {
-    super.displayBoard(lastMove)
-    println(f"Hash: ${hash.toHexString} Ko-Hash: ${koHash.toHexString}\n")
+    myPrint(toString(lastMove))
+  }
+
+  override def toString(lastMove: Short = -1): String = {
+    var s = super.toString(lastMove)
+    s + f"Hash: ${hash.toHexString} Ko-Hash: ${koHash.toHexString}"
   }
 }

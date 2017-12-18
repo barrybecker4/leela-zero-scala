@@ -10,7 +10,7 @@ object Utils {
 
   def myPrint(string: String): Unit = {
     if (!cfgQuiet) {
-      System.out.println(string)
+      println(string)
       if (cfgLogFileHandle.nonEmpty) {
         this.synchronized {
           //std::lock_guard<std::mutex> lock(IOmutex)  ??

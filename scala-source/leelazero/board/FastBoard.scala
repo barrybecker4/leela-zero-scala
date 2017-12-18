@@ -3,6 +3,7 @@ package leelazero.board
 import leelazero.board.FastBoard._
 
 import scala.collection.immutable.Queue
+import leelazero.util.Utils.myPrint
 
 
 object FastBoard {
@@ -309,7 +310,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
   }
 
   /** Print the board as text */
-  def displayBoard(lastMove: Short = -1): Unit = print(toString(lastMove))
+  def displayBoard(lastMove: Short = -1): Unit = myPrint(toString(lastMove))
   override def toString: String = toString(-1)
   def toString(lastMove: Short): String = fbs.serialize(lastMove)
   def updateBoardFast(x: Int, y: Int, color: Byte): (Short, Boolean) = updateBoardFast(color, getVertex(x, y))

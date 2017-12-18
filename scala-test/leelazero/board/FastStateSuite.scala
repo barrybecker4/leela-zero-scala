@@ -2,6 +2,35 @@ package leelazero.board
 
 import org.scalatest.FunSuite
 import FastBoard._
+import FastStateSuite._
+import leelazero.TestUtil._
+
+
+object FastStateSuite {
+  def createFilled5x5State(): FastState = {
+    val b = new FullBoard(5)
+    val state = new FastState(5, 0.5f, b)
+
+    state.playMove((1, 1), BLACK)
+    state.playMove((2, 1), BLACK)
+    state.playMove((3, 1), WHITE)
+    state.playMove((2, 2), WHITE)
+    state.playMove((3, 2), BLACK)
+    state.playMove((0, 3), BLACK)
+    state.playMove((2, 3), WHITE)
+    state.playMove((2, 4), WHITE)
+    state.playMove((3, 3), WHITE)
+    state.playMove((4, 4), WHITE)
+    state.playMove((4, 3), BLACK)
+    state.playMove((1, 2), WHITE)
+    state.playMove((0, 2), BLACK)
+    state.playMove((0, 0), WHITE)
+    state.playMove((1, 0), BLACK)
+    state.playMove((3, 0), BLACK)
+    state
+  }
+}
+
 
 class FastStateSuite extends FunSuite {
 
@@ -95,4 +124,38 @@ class FastStateSuite extends FunSuite {
       state.generateMoves(BLACK).mkString(", ")
     }
   }
+
+  test("reset") {
+    val fstate = createFilled5x5State()
+    assertResult(16) {fstate.getMoveNum}
+    assertResult(11) {fstate.getLastMove}
+    assertResult(WHITE) {fstate.getToMove}
+    fstate.resetGame()
+    assertResult(BLACK) {fstate.getToMove}
+    assertResult(0.5) {fstate.komi}
+    assertResult(0) {fstate.getMoveNum}
+    assertResult(0) {fstate.getLastMove}
+  }
+
+  test("toString") {
+    val fstate = createFilled5x5State()
+    fstate.displayState()
+    assertResult(clean("""
+       |Passes: 0
+       |Black (X) Prisoners: 0
+       |White (O) Prisoners: 0
+       |White (O) to move
+       |   a b c d e
+       | 5 . . O . O  5
+       | 4 X . O O X  4
+       | 3 X O O X .  3
+       | 2 . X X O .  2
+       | 1 O X .(X).  1
+       |   a b c d e
+       |
+       |Hash: d45d73afd91565f9 Ko-Hash: 97a9823d509053a3""")) {
+      fstate.toString
+    }
+  }
+
 }
