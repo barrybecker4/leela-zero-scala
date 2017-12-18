@@ -153,8 +153,18 @@ class FastStateSuite extends FunSuite {
        | 1 O X .(X).  1
        |   a b c d e
        |
-       |Hash: 121a4695d969bb0b Ko-Hash: dc57177b70443191""")) {
+       |Hash: c9fb984ce8d718e0 Ko-Hash: feacb9064ac1e940""")) {
       fstate.toString
+    }
+  }
+
+  test("generateMoves") {
+    val fstate = createFilled5x5State()
+    assertResult("12, 15, 19, 39, 36, 10, 37, 26, 30") {
+      fstate.generateMoves(BLACK).mkString(", ")
+    }
+    assertResult("12, 19, 39, 36, 37, 26, 30") {
+      fstate.generateMoves(WHITE).mkString(", ")
     }
   }
 
