@@ -79,13 +79,14 @@ class GameHistory() {
 
   def playMove(color: Byte, vertex: Short): Unit = {
     if (vertex != PASS && vertex != RESIGN) {
-      playMove(color, vertex)
+      currentState.playMove(color, vertex)
     } else {
       playPass()
       if (vertex == RESIGN) {
         currentState.resign()
       }
     }
+    moveNum += 1
 
     // cut off any leftover moves from navigating
     gameHistory = gameHistory.take(moveNum)

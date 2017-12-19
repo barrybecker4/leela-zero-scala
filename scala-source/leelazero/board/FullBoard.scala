@@ -218,7 +218,8 @@ class FullBoard(size: Short = MAX_BOARD_SIZE) extends FastBoard(size) {
     myPrint(toString(lastMove))
   }
 
-  override def toString(lastMove: Short = -1): String = {
+  override def toString: String = toString(-1)
+  override def toString(lastMove: Short): String = {
     var s = super.toString(lastMove)
     s + f"Hash: ${hash.toHexString} Ko-Hash: ${koHash.toHexString}"
   }
