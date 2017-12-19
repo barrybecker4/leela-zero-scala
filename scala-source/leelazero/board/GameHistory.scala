@@ -3,6 +3,7 @@ package leelazero.board
 import leelazero.board.FastBoard._
 import leelazero.uct.UctSearch
 import leelazero.util.TimeControl
+import leelazero.util.Utils._
 
 
 /** Keeps track of all the moves played for this game */
@@ -46,6 +47,9 @@ class GameHistory() {
     moveNum = 0
   }
 
+  /** Move the state foward one move.
+    * @return true if moved forward, false if already most current
+    */
   def forwardMove(): Boolean = {
     if (gameHistory.length > moveNum + 1) {
       moveNum += 1
@@ -54,6 +58,7 @@ class GameHistory() {
     } else false
   }
 
+  /* @return true if moved back, false if already at start. */
   def undoMove(): Boolean = {
     if (moveNum > 0) {
       moveNum -= 1
@@ -89,7 +94,7 @@ class GameHistory() {
 
   def playTextMove(color: String, vertex: String): Boolean = {
 
-    val boardsize = currentState.size
+    val boardSize = currentState.size
 
     val who = if (color == "w" || color == "white") {
        WHITE
@@ -109,7 +114,7 @@ class GameHistory() {
     }
 
     val row = vertex.charAt(1).toInt - 1
-    if (row >= boardsize || column >= boardsize)
+    if (row >= boardSize || column >= boardSize)
       return false
 
     val move = currentState.getBoard.getVertex(column, row)
@@ -120,8 +125,12 @@ class GameHistory() {
   def stopClock(color: Byte): Unit = timeControl.stop(color)
   def startClock(color: Byte): Unit = timeControl.start(color)
   def displayState(): Unit = {
+    myPrint(toString)
     currentState.displayState()
     timeControl.displayTimes()
+  }
+  override def toString: String = {
+    currentState.toString + "\n" + timeControl.toString
   }
 
   def getTimeControl: TimeControl = timeControl
@@ -180,8 +189,8 @@ class GameHistory() {
     true
   }
 
-  /** @return number of placed handicap stones - which might be less that the number specified */
-  def setFixedHandicap2(handicap: Short): Int = {
+  /** @return number of placed handicap stones - which might be less than the number specified */
+  private def setFixedHandicap2(handicap: Short): Int = {
     val size = currentState.size
     val board = currentState.getBoard
     val low = if (size >= 13)  3 else 2

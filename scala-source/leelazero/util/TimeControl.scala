@@ -76,7 +76,8 @@ case class TimeControl(boardSize: Short,
   def setBoardSize(size: Short): Unit = movesExpected = (size * size) / 5
   def getRemainingTime(color: Int): Int = remainingTime(color)
   override def toString: String = Array[Byte](0, 1).map(serializeForPlayer).mkString("\n")
-  def displayTimes(): Unit = for (i <- 0 to 1) myPrint(serializeForPlayer(i.toByte))
+  def displayTimes(): Unit = myPrint(toString)
+    //for (i <- 0 to 1) myPrint(serializeForPlayer(i.toByte))
 
   private def serializeForPlayer(color: Byte): String = {
     var remaining: Int = remainingTime(color) / 100 // centiseconds to seconds

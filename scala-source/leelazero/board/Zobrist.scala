@@ -30,7 +30,7 @@ class Zobrist(size: Short, seed: Long = SEED) {
   val zobristPristine: Array[Array[Long]] = Array.ofDim(2, 2 * maxSq)
   val zobristPass: Array[Long] = Array.ofDim(NUM_PASSES)
   init()
-
+  /*
   def copy(): Zobrist = {
     val z = new Zobrist(size, seed)
     for (i <- 0 until NUM_REGULAR)
@@ -46,7 +46,7 @@ class Zobrist(size: Short, seed: Long = SEED) {
       z.zobristPass(i) = this.zobristPass(i)
     }
     z
-  }
+  }*/
 
   private def init(): Unit = {
     def nextR() = rand.nextInt().toLong

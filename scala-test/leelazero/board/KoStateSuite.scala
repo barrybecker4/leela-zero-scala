@@ -2,9 +2,23 @@ package leelazero.board
 
 import org.scalatest.FunSuite
 import FastBoard._
+import KoStateSuite._
+
+object KoStateSuite {
+
+  def createSuperKoSetup3x3(): KoState = {
+    val state = new KoState(3, 0.5f)
+    state.playMove(WHITE, 0, 0)
+    state.playMove(BLACK, 2, 1)
+    state.playMove(WHITE, 1, 1)
+    state.playMove(BLACK, 1, 2)
+    state.playMove(WHITE, 0, 2)
+    state.playMove(BLACK, 1, 0)
+    state
+  }
+}
 
 class KoStateSuite extends FunSuite {
-
 
   test("default construction") {
     val state = new KoState(5, 0.5f)
@@ -61,14 +75,4 @@ class KoStateSuite extends FunSuite {
     assertResult(false) { state.superKo(state.getKoHash) }
   }
 
-  private def createSuperKoSetup3x3(): KoState = {
-    val state = new KoState(3, 0.5f)
-    state.playMove(WHITE, 0, 0)
-    state.playMove(BLACK, 2, 1)
-    state.playMove(WHITE, 1, 1)
-    state.playMove(BLACK, 1, 2)
-    state.playMove(WHITE, 0, 2)
-    state.playMove(BLACK, 1, 0)
-    state
-  }
 }

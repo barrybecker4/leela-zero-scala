@@ -63,6 +63,7 @@ class FastStateSuite extends FunSuite {
 
     assertResult(-8) { state.estimateMcScore }
     assertResult(-33.5) { state.finalScore }
+    assertResult("-7210339456720102496 -5453706864656380203") { state.getHash + " " + state.getKoHash}
   }
 
   test("state after play (BLACK winning)") {
@@ -80,6 +81,7 @@ class FastStateSuite extends FunSuite {
 
     assertResult(-10) { state.estimateMcScore }
     assertResult(-11.5) { state.finalScore }
+    assertResult("-4715729996157500995 -551791174842044402") { state.getHash + " " + state.getKoHash}
 
     assertResult(
       "12, 23, 34, 45, 56, 67, 78, 89, 100, 13, 24, 35, 46, 57, 68, 79, 90, 101, 14, 25, 36, 47, 58, " +
@@ -139,7 +141,6 @@ class FastStateSuite extends FunSuite {
 
   test("toString") {
     val fstate = createFilled5x5State()
-    fstate.displayState()
     assertResult(clean("""
        |Passes: 0
        |Black (X) Prisoners: 0
@@ -153,7 +154,28 @@ class FastStateSuite extends FunSuite {
        | 1 O X .(X).  1
        |   a b c d e
        |
-       |Hash: c9fb984ce8d718e0 Ko-Hash: feacb9064ac1e940""")) {
+       |Hash: 2ca935a10b8d1c11 Ko-Hash: 316055638b60964""")) {
+      fstate.toString
+    }
+  }
+
+  test("toStringafter play") {
+    val fstate = createFilled5x5State()
+    fstate.playMove(BLACK, fstate.getBoard.getVertex(3, 4))
+    assertResult(clean("""
+       |Passes: 0
+       |Black (X) Prisoners: 1
+       |White (O) Prisoners: 0
+       |White (O) to move
+       |   a b c d e
+       | 5 . . O(X).  5
+       | 4 X . O O X  4
+       | 3 X O O X .  3
+       | 2 . X X O .  2
+       | 1 O X . X .  1
+       |   a b c d e
+       |
+       |Hash: 239cfa55be7d044a Ko-Hash: 8ed3cb05e5d46fc4""")) {
       fstate.toString
     }
   }
@@ -168,4 +190,12 @@ class FastStateSuite extends FunSuite {
     }
   }
 
+  test("play passes") {
+    val fstate = createFilled5x5State()
+    assertResult(0) {fstate.getPasses}
+    fstate.playPass()
+    assertResult(1) {fstate.getPasses}
+    fstate.playPass()
+    assertResult(2) {fstate.getPasses}
+  }
 }

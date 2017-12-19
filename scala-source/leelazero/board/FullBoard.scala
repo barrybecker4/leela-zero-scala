@@ -57,19 +57,20 @@ class FullBoard(size: Short = MAX_BOARD_SIZE) extends FastBoard(size) {
 
   def copy(): FullBoard = {
     val cp = new FullBoard(size)
-    cp.emptyIdices = this.emptyIdices
+    cp.square = this.square.map(identity)
+    cp.emptyIdices = this.emptyIdices.map(identity)
     cp.emptyCount = this.emptyCount
     cp.parentString = this.parentString
-    cp.stringLiberties = this.stringLiberties
-    cp.stonesInString = this.stonesInString
-    cp.neighbors = this.neighbors
+    cp.stringLiberties = this.stringLiberties.map(identity)
+    cp.stonesInString = this.stonesInString.map(identity)
+    cp.neighbors = this.neighbors.map(identity)
     cp.next = this.next
-    cp.prisoners = this.prisoners
-    cp.totalStones = this.totalStones
+    cp.prisoners = this.prisoners.map(identity)
+    cp.totalStones = this.totalStones.map(identity)
     cp.toMove = this.toMove
     cp.hash = this.getHash
     cp.koHash = this.getKoHash
-    cp.zobrist = this.zobrist.copy()
+    cp.zobrist = this.zobrist
     cp
   }
 
