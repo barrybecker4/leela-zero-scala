@@ -10,6 +10,8 @@ object FullBoard {
     * Largest scala Long is 9223372036854775807. The 0x prefix indicates hexadecimal.
     */
   val INITIAL_HASH = 0x1234567887654321L
+  /** Hash applied after each move or pass */
+  val MOVE_HASH = 0xABCDABCDABCDABCDL
 }
 
 class FullBoard(size: Short = MAX_BOARD_SIZE) extends FastBoard(size) {
@@ -67,7 +69,7 @@ class FullBoard(size: Short = MAX_BOARD_SIZE) extends FastBoard(size) {
     cp.toMove = this.toMove
     cp.hash = this.getHash
     cp.koHash = this.getKoHash
-    cp.zobrist = this.zobrist
+    cp.zobrist = this.zobrist.copy()
     cp
   }
 
@@ -77,14 +79,14 @@ class FullBoard(size: Short = MAX_BOARD_SIZE) extends FastBoard(size) {
     koHash
   }
 
-  /** @return zobrish has for current board state */
+  /** @return zobrish hash for current board state */
   def calcHash(): Long = {
     hash = incorporatePrisoners(calcBaseHash())
     hash
   }
 
   def playPass(passes: Int): Unit = {
-    hash  ^= 0xABCDABCDABCDABCDL
+    hash  ^= MOVE_HASH
     toMove = otherColor(toMove)
     hash ^= zobrist.zobristPass(passes)
     hash ^= zobrist.zobristPass(passes)
@@ -92,7 +94,7 @@ class FullBoard(size: Short = MAX_BOARD_SIZE) extends FastBoard(size) {
 
   def playMove(color: Byte, passes: Int): Unit = {
     if (toMove == color) {
-      hash  ^= 0xABCDABCDABCDABCDL
+      hash  ^= MOVE_HASH
     }
     toMove = otherColor(color)
 
@@ -115,15 +117,18 @@ class FullBoard(size: Short = MAX_BOARD_SIZE) extends FastBoard(size) {
   /** @return hash modified by current prisoners. Prisoner hashing is rule set dependent */
   private def incorporatePrisoners(hash: Long): Long = {
     var res = hash
-    res ^= zobrist.zobristPristine(0)(prisoners(0))
-    res ^= zobrist.zobristPristine(1)(prisoners(1))
+    res ^= zobrist.zobristPristine(BLACK)(prisoners(BLACK))
+    res ^= zobrist.zobristPristine(WHITE)(prisoners(WHITE))
     if (toMove == BLACK)
-      res ^= 0xABCDABCDABCDABCDL
+      res ^= MOVE_HASH
     res
   }
 
   /**
-    * Returns ko square or suicide tag. Does not update side to move.
+    * Returns ko square (if there is one, else -1) and whether there were captures made. Does not update side to move.
+    * If in the middle of a ko, then returns (position of ko, 1)
+    * If i is a suicide move, then returns (-1, true)
+    * If move captures 4 stones, then returns (-1, true)
     * @param color player who placed a stone
     * @param i position
     * @return (ko square, capture) If no capture then return (-1, false)
