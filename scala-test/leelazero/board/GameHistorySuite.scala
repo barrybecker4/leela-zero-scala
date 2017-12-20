@@ -136,6 +136,74 @@ class GameHistorySuite extends FunSuite {
         |Hash: a2ccde58da94f64d Ko-Hash: 1190a49cd1384ccb""")) {hist.getCurrentState.toString}
   }
 
+  test("resetGame") {
+    val hist = create3x3History()
+    hist.resetGame()
+
+    assertResult(clean(
+      """
+        |Passes: 0
+        |Black (X) Prisoners: 0
+        |White (O) Prisoners: 0
+        |Black (X) to move
+        |   a b c
+        | 3 . . .  3
+        | 2 . . .  2
+        | 1 . . .  1
+        |   a b c
+        |
+        |Hash: d7ddc46eacc89f24 Ko-Hash: cf4c15670ca98e6f""")) {
+      hist.getCurrentState.toString
+    }
+  }
+
+  test("play black textMove") {
+    val hist = create3x3History()
+    assertResult(true) {hist.playTextMove("black", "c3")}
+
+    assertResult(clean(
+      """
+        |Passes: 0
+        |Black (X) Prisoners: 0
+        |White (O) Prisoners: 0
+        |White (O) to move
+        |   a b c
+        | 3 O X(X) 3
+        | 2 . O X  2
+        | 1 O X .  1
+        |   a b c
+        |
+        |Hash: c320387b8499c033 Ko-Hash: 707c42bf8f357ab5""")) {
+      hist.getCurrentState.toString
+    }
+  }
+
+  test("play white textMove") {
+    val hist = create3x3History()
+    assertResult(true) {hist.playTextMove("w", "c1")}
+
+    assertResult(clean(
+      """
+        |Passes: 0
+        |Black (X) Prisoners: 0
+        |White (O) Prisoners: 1
+        |Black (X) to move
+        |   a b c
+        | 3 O X .  3
+        | 2 . O X  2
+        | 1 O .(O) 1
+        |   a b c
+        |
+        |Hash: 18a3487d67f824cb Ko-Hash: e144d893d378e944""")) {
+      hist.getCurrentState.toString
+    }
+  }
+
+  test("play out of bounds black textMove") {
+    val hist = create3x3History()
+    assertResult(false) {hist.playTextMove("black", "d6")}
+  }
+
   private def create3x3History(): GameHistory = {
     val hist = new GameHistory()
     hist.initHistory(3, 6.5f)

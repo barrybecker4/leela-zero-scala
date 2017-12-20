@@ -114,9 +114,12 @@ class GameHistory() {
       else (vertex(0) - 'a') - 1
     }
 
-    val row = vertex.charAt(1).toInt - 1
-    if (row >= boardSize || column >= boardSize)
+    val row = vertex.substring(1).toInt - 1
+    if (row >= boardSize || column >= boardSize) {
+      println(s" The move position ($column, $row) was out of range. Size = $boardSize")
       return false
+    }
+
 
     val move = currentState.getBoard.getVertex(column, row)
     playMove(who, move)
