@@ -286,10 +286,12 @@ class SgfTree {
   def applyMove(move: Short): Unit = applyMove(gameHistory.getCurrentState.getToMove, move)
   def addProperty(property: String, value: String): Unit = properties += property -> value
 
+  def addChild(child: SgfTree): Unit = children :+= child
+  /*
   def addChild(): Unit = {
     val tree = new SgfTree()
     children :+= tree
-  }
+  }*/
 
   def getMove(toMove: Byte): Short = {
     val moveString = if (toMove == BLACK) "B" else "W"

@@ -1,11 +1,12 @@
 package leelazero.sgf
 
-import java.io.InputStream
-
+import java.io._
+import SgfParser._
 
 object SgfParser {
   def parse(gameBuff: String, tree: SgfTree): Unit = {}
   def chopFromFile(fileName: String, index: Int): String = "foo"
+  def is7bit(c: Int): Boolean = c >= 0 && c <= 127
 }
 
 /** Parse an SFG file */
@@ -64,246 +65,178 @@ class SgfParser {
       result :+= gameBuff
     result
   }
-}
-/*
-std::vector<std::string> SGFParser::chop_stream(std::istream& ins,
-                                                size_t stopat) {
-    std::vector<std::string> result;
-    std::string gamebuff;
 
-    ins >> std::noskipws;
+  def chopAll(fileName: String, stopAt: Short): Seq[String] = {
+    val ins: InputStream = new FileInputStream(new File(fileName))
+    val result = chopStream(ins, stopAt)
+    ins.close()
+    result
+  }
 
-    int nesting = 0;      // parentheses
-    bool intag = false;   // brackets
-    int line = 0;
-    gamebuff.clear();
+  def chopFromFile(fileName: String, index: Short): String = {
+    val vec = chopAll(fileName, index)
+    vec(index)
+  }
 
-    char c;
-    while (ins >> c && result.size() <= stopat) {
-        if (c == '\n') line++;
+  // took StringReader, now PushbackReader
+  def parsePropertyName(strm: PushbackInputStream): String = {
+    var done = false
+    var result = ""
 
-        gamebuff.push_back(c);
-        if (c == '\\') {
-            // read literal char
-            ins >> c;
-            gamebuff.push_back(c);
-            // Skip special char parsing
-            continue;
-        }
-
-        if (c == '(' && !intag) {
-            if (nesting == 0) {
-                // eat ; too
-                do {
-                    ins >> c;
-                } while(std::isspace(c) && c != ';');
-                gamebuff.clear();
-            }
-            nesting++;
-        } else if (c == ')' && !intag) {
-            nesting--;
-
-            if (nesting == 0) {
-                result.push_back(gamebuff);
-            }
-        } else if (c == '[' && !intag) {
-            intag = true;
-        } else if (c == ']') {
-            if (intag == false) {
-                Utils::myprintf("Tag error on line %d", line);
-            }
-            intag = false;
-        }
-    }
-
-    // No game found? Assume closing tag was missing (OGS)
-    if (result.size() == 0) {
-        result.push_back(gamebuff);
-    }
-
-    return result;
-}
-
-std::vector<std::string> SGFParser::chop_all(std::string filename,
-                                             size_t stopat) {
-    std::ifstream ins(filename.c_str(), std::ifstream::binary | std::ifstream::in);
-
-    if (ins.fail()) {
-        throw std::runtime_error("Error opening file");
-    }
-
-    auto result = chop_stream(ins, stopat);
-    ins.close();
-
-    return result;
-}
-
-// scan the file and extract the game with number index
-std::string SGFParser::chop_from_file(std::string filename, size_t index) {
-    auto vec = chop_all(filename, index);
-    return vec[index];
-}
-
-std::string SGFParser::parse_property_name(std::istringstream & strm) {
-    std::string result;
-
-    char c;
-    while (strm >> c) {
-        // SGF property names are guaranteed to be uppercase,
-        // except that some implementations like IGS are retarded
-        // and don't folow the spec. So allow both upper/lowercase.
-        if (!std::isupper(c) && !std::islower(c)) {
-            strm.unget();
-            break;
+    do {
+      val i = strm.read()
+      if (i != -1) {
+        val c = i.toChar
+        if (!c.isUpper && !c.isLower) {
+          strm.unread(i)
+          done = true
         } else {
-            result.push_back(c);
+          result += c
         }
-    }
+      } else {
+        done = true
+      }
+    } while (!done)
+    result
+  }
 
-    return result;
-}
-
-bool SGFParser::parse_property_value(std::istringstream & strm,
-                                     std::string & result) {
-    strm >> std::noskipws;
-
-    char c;
-    while (strm >> c) {
-        if (!std::isspace(c)) {
-            strm.unget();
-            break;
+  def parsePropertyValue(strm: PushbackInputStream): (Boolean, String) = {
+    var c: Char = ' '
+    var result = ""
+    var done = false
+    do {
+      val i = strm.read()
+      if (i == -1 ) done = true
+      else {
+        c = i.toChar
+        if (!c.isSpaceChar) {
+          strm.unread(i)
+          done = true
         }
-    }
+      }
+    } while (!done)
 
-    strm >> c;
+    c = strm.read().toChar
 
     if (c != '[') {
-        strm.unget();
-        return false;
+      strm.unread(c)
+      return (false, "")
     }
 
-    while (strm >> c) {
+    done = false
+    do {
+      val i = strm.read()
+      if (i == -1) done = true
+      else {
         if (c == ']') {
-            break;
+          done = true
         } else if (c == '\\') {
-            strm >> c;
+          c = strm.read().toChar
         }
-        result.push_back(c);
-    }
+        result += c
+      }
 
-    strm >> std::skipws;
+    } while (!done)
+    (true, result)
+  }
 
-    return true;
-}
+  def parse(strm: PushbackInputStream): SgfTree = {
+    var splitPoint: Boolean = false
+    var c: Char = ' '
+    var node: SgfTree = new SgfTree()
+    var done = false
 
-void SGFParser::parse(std::istringstream & strm, SGFTree * node) {
-    bool splitpoint = false;
+    do {
+      val i = strm.read()
+      if (i == -1) done = true
+      else {
+        c = i.toChar
+        if (!c.isWhitespace) {
+          if (c.isLetter && c.isUpper) {
+            strm.unread(c)
 
-    char c;
-    while (strm >> c) {
-        if (strm.fail()) {
-            return;
-        }
-
-        if (std::isspace(c)) {
-            continue;
-        }
-
-        // parse a property
-        if (std::isalpha(c) && std::isupper(c)) {
-            strm.unget();
-
-            std::string propname = parse_property_name(strm);
-            bool success;
-
+            val propName = parsePropertyName(strm)
+            var success = true
             do {
-                std::string propval;
-                success = parse_property_value(strm, propval);
-                if (success) {
-                    node->add_property(propname, propval);
-                }
-            } while (success);
+              val (success, propVal) = parsePropertyValue(strm)
+              if (success) {
+                node.addProperty(propName, propVal)
+              }
+            } while (success)
+          } else {
+            if (c == '(') {
+              var cc: Char = ' '
+              do {
+                cc = strm.read().toChar
+              } while (cc.isSpaceChar)
+              if (cc != ';') { // eat first ;
+                strm.unread(cc)
+              }
+              // start a variation here
+              splitPoint = true
+              // new node
+              val childTree = parse(strm)
+              node.addChild(childTree)
 
-            continue;
-        }
-
-        if (c == '(') {
-            // eat first ;
-            char cc;
-            do {
-                strm >> cc;
-            } while (std::isspace(cc));
-            if (cc != ';') {
-                strm.unget();
+            } else if (c == ')') {
+              // variation ends, go back.
+              // If the variation didn't start here, then push the "variation ends" mark back
+              // and try again one level up the tree
+              if (!splitPoint) {
+                strm.unread(c)
+                return null
+              } else {
+                splitPoint = false // continue?
+              }
+            } else if (c == ';') {
+              // new node
+              val newNode = new SgfTree()
+              node.addChild(newNode)
+              node = newNode
+              // continue?
             }
-            // start a variation here
-            splitpoint = true;
-            // new node
-            SGFTree * newptr = node->add_child();
-            parse(strm, newptr);
-        } else if (c == ')') {
-            // variation ends, go back
-            // if the variation didn't start here, then
-            // push the "variation ends" mark back
-            // and try again one level up the tree
-            if (!splitpoint) {
-                strm.unget();
-                return;
-            } else {
-                splitpoint = false;
-                continue;
-            }
-        } else if (c == ';') {
-            // new node
-            SGFTree * newptr = node->add_child();
-            node = newptr;
-            continue;
+          }
         }
-    }
-}
+      }
+    } while (!done)
+    node
+  }
 
-int SGFParser::count_games_in_file(std::string filename) {
-    std::ifstream ins(filename.c_str(), std::ifstream::binary | std::ifstream::in);
+  /** @return the number of games in the specified file */
+  def countGamesInFile(fileName: String): Int = {
+    val ins: InputStream = new FileInputStream(new File(fileName))
+    var count = 0
+    var nesting = 0
+    var done = false
+    var c: Char = ' '
 
-    if (ins.fail()) {
-        throw std::runtime_error("Error opening file");
-    }
-
-    int count = 0;
-    int nesting = 0;
-
-    char c;
-    while (ins >> c) {
-        if (!Utils::is7bit(c)) {
-            do {
-                ins >> c;
-            } while (!Utils::is7bit(c));
-            continue;
-        }
-
-        if (c == '\\') {
-            // read literal char
-            ins >> c;
-            // Skip special char parsing
-            continue;
-        }
-
-        if (c == '(') {
-            nesting++;
-        } else if (c == ')') {
-            nesting--;
-
-            assert(nesting >= 0);
-
+    do {
+      var i = ins.read()
+      if (i == -1) done = true
+      else {
+        c = i.toChar
+        if (!is7bit(i)){
+          do {
+            i = ins.read()
+            c = i.toChar
+          } while (!is7bit(i))
+        } else if (c == '\\') {
+          c = ins.read().toChar // read literal char
+        } else {
+          if (c == '(') {
+            nesting += 1
+          } else if (c == ')') {
+            nesting -= 1
+            assert (nesting >= 0)
             if (nesting == 0) {
-                // one game processed
-                count++;
+              count += 1 // one game processed
             }
+          }
         }
-    }
+      }
+    } while (!done)
 
-    ins.close();
-
-    return count;
+    ins.close()
+    count
+  }
 }
- */
