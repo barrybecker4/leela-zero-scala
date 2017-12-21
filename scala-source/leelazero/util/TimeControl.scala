@@ -1,11 +1,11 @@
 package leelazero.util
 
-import leelazero.util.TimeControl.{BUFFER_CENTISECS, HOUR, MONTH}
+import leelazero.util.TimeControl.{BUFFER_CENTISECS, HOUR_IN_CENTISECONDS, MONTH}
 import leelazero.util.Timing._
 import leelazero.util.Utils._
 
 object TimeControl {
-  val HOUR: Int = 60 * 60 * 100
+  val HOUR_IN_CENTISECONDS: Int = 60 * 60 * 100
   val MONTH: Int = 31 * 24 * 60 * 60 * 100
 
   /** Keep a 1 second margin for net hiccups */
@@ -14,7 +14,7 @@ object TimeControl {
 
 /**  Timing info is per GTP and in centiseconds */
 case class TimeControl(boardSize: Short,
-                       mainTime: Int = HOUR, byoTime: Int = 0, byoStones: Int = 25, byoPeriods: Int = 0) {
+                       mainTime: Int = HOUR_IN_CENTISECONDS, byoTime: Int = 0, byoStones: Int = 25, byoPeriods: Int = 0) {
   private var movesExpected: Int = 0
 
   private val remainingTime = Array.ofDim[Int](2) // main time per player

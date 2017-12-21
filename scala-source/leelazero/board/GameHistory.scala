@@ -14,6 +14,9 @@ class GameHistory() {
   private var timeControl: TimeControl = _
   private var moveNum = 0
 
+  def getMoveNum: Int = moveNum
+  def getHistoryLength: Int = gameHistory.length
+
   def initHistory(size: Short, komi: Float) {
     currentState = new KoState(size, komi)
     gameHistory = Seq(currentState)
@@ -119,7 +122,6 @@ class GameHistory() {
       println(s" The move position ($column, $row) was out of range. Size = $boardSize")
       return false
     }
-
 
     val move = currentState.getBoard.getVertex(column, row)
     playMove(who, move)

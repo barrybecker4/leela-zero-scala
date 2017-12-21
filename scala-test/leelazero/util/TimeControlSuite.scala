@@ -7,10 +7,10 @@ import  TimeControl._
 class TimeControlSuite extends FunSuite {
 
   test("basic time control construction with defaults") {
-    val tc = new TimeControl(boardSize = 9, mainTime = HOUR)
+    val tc = new TimeControl(boardSize = 9, mainTime = HOUR_IN_CENTISECONDS)
 
-    assertResult(HOUR) {tc.getRemainingTime(BLACK)}
-    assertResult(HOUR) {tc.getRemainingTime(WHITE)}
+    assertResult(HOUR_IN_CENTISECONDS) {tc.getRemainingTime(BLACK)}
+    assertResult(HOUR_IN_CENTISECONDS) {tc.getRemainingTime(WHITE)}
     assertResult(22493) {tc.maxTimeForMove(BLACK)}
     assertResult(22493) {tc.maxTimeForMove(WHITE)}
     assertResult("Black time: 01:00:00\nWhite time: 01:00:00") { tc.toString }
@@ -26,7 +26,7 @@ class TimeControlSuite extends FunSuite {
   }
 
   test("time control after updating") {
-    val tc = new TimeControl(boardSize = 9, mainTime = HOUR)
+    val tc = new TimeControl(boardSize = 9, mainTime = HOUR_IN_CENTISECONDS)
 
     tc.adjustTime(BLACK, 500, 1)
     tc.adjustTime(WHITE, 400, 1)
@@ -40,7 +40,7 @@ class TimeControlSuite extends FunSuite {
   }
 
   test("time control start/stop") {
-    val tc = new TimeControl(boardSize = 9, mainTime = HOUR)
+    val tc = new TimeControl(boardSize = 9, mainTime = HOUR_IN_CENTISECONDS)
 
     tc.start(BLACK)
     Thread.sleep(200)
