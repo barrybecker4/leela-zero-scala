@@ -4,7 +4,7 @@ import leelazero.board.FastBoard.{PASS, RESIGN}
 
 /** maintains Zobrist hash history in order to detect super kos */
 class KoState(size: Short, komi: Float, fboard: FullBoard = null) extends FastState(size, komi, fboard) {
-  assert(size < FastBoard.MAX_BOARD_SIZE)
+  assert(size <= FastBoard.MAX_BOARD_SIZE)
   private var koHashHistory: Seq[Long] = Seq(calcKoHash)
   private var hashHistory: Seq[Long] = Seq(calcHash)
 

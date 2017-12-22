@@ -37,6 +37,7 @@ class SgfTree {
     gameHistory.getCurrentState
   }
 
+  /** @return the  child based on specified index, or null if none at that index */
   def getChild(count: Short): SgfTree = {
     if (count < children.length) {
       assert(initialized)
