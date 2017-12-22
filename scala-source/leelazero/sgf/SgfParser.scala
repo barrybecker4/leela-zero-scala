@@ -4,8 +4,26 @@ import java.io._
 import SgfParser._
 
 object SgfParser {
-  def parse(gameBuff: String, tree: SgfTree): Unit = {}
-  def chopFromFile(fileName: String, index: Int): String = "foo"
+
+  /** @return game tree loaded from specified string */
+  def loadFromString(gameBuff: String): Unit = {
+    val parser: SgfParser = new SgfParser()
+
+    val stream = new ByteArrayInputStream(gameBuff.getBytes)
+    val sgfTree = parser.parse(new PushbackInputStream(stream)) // loads properties with moves
+    sgfTree.initState() // Set up the root state to defaults
+
+    // populates the states from the moves; split this up in root node, aNchor (handicap), other nodes
+    sgfTree.populateStates()
+    sgfTree
+  }
+
+  def loadFromFile(fileName: String, index: Short): Unit = {
+    val parser: SgfParser = new SgfParser()
+    val gameBuff: String = parser.chopFromFile(fileName, index)
+    loadFromString(gameBuff)
+  }
+
   def is7bit(c: Int): Boolean = c >= 0 && c <= 127
 }
 
@@ -16,7 +34,6 @@ class SgfParser {
   def chopStream(ins: InputStream, stopAt: Short): Seq[String] = {
     var result = Seq[String]()
     var gameBuff = ""
-    //ins >> std::noskipws  ???
 
     var nesting: Int = 0      // parentheses nesting
     var intag = false         // brackets
@@ -66,20 +83,20 @@ class SgfParser {
     result
   }
 
-  def chopAll(fileName: String, stopAt: Short): Seq[String] = {
+  private def chopAll(fileName: String, stopAt: Short): Seq[String] = {
     val ins: InputStream = new FileInputStream(new File(fileName))
     val result = chopStream(ins, stopAt)
     ins.close()
     result
   }
 
-  def chopFromFile(fileName: String, index: Short): String = {
+  private def chopFromFile(fileName: String, index: Short): String = {
     val vec = chopAll(fileName, index)
     vec(index)
   }
 
   // took StringReader, now PushbackReader
-  def parsePropertyName(strm: PushbackInputStream): String = {
+  private def parsePropertyName(strm: PushbackInputStream): String = {
     var done = false
     var result = ""
 
@@ -100,7 +117,7 @@ class SgfParser {
     result
   }
 
-  def parsePropertyValue(strm: PushbackInputStream): (Boolean, String) = {
+  private def parsePropertyValue(strm: PushbackInputStream): (Boolean, String) = {
     var c: Char = ' '
     var result = ""
     var done = false
@@ -140,7 +157,7 @@ class SgfParser {
     (true, result)
   }
 
-  def parse(strm: PushbackInputStream): SgfTree = {
+  private def parse(strm: PushbackInputStream): SgfTree = {
     var splitPoint: Boolean = false
     var c: Char = ' '
     var node: SgfTree = new SgfTree()
@@ -202,7 +219,7 @@ class SgfParser {
     node
   }
 
-  /** @return the number of games in the specified file */
+  /** @return the number of games in the specified file  (i.e. the different branches) */
   def countGamesInFile(fileName: String): Int = {
     val ins: InputStream = new FileInputStream(new File(fileName))
     var count = 0

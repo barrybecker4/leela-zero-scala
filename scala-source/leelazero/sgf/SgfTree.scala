@@ -23,12 +23,12 @@ class SgfTree {
   private var gameHistory: GameHistory = _
   private var winner: Byte = INVALID // no winner initially
   private var children: Seq[SgfTree] = Seq()
-  private var properties: Map[String, String] = _
+  private var properties = Map[String, String]()
 
   /** Initialize defaults. The SGF might be missing boardsize or komi which means we'll never initialize properly */
   def initState(): Unit = {
     gameHistory = new GameHistory()
-    gameHistory.initHistory(19, 7.5f)
+    gameHistory.initHistory(MAX_BOARD_SIZE, 7.5f)
     initialized = true
   }
 
@@ -100,25 +100,9 @@ class SgfTree {
     count
   }
 
-  def loadFromString(gameBuff: String): Unit = {
-    //std::istringstream pstream(gameBuff)
 
-    //SGFParser.parse(pstream, this)
-    SgfParser.parse(gameBuff, this) // loads properties with moves
-
-    initState() // Set up the root state to defaults
-
-    // populates the states from the moves; split this up in root node, achor (handicap), other nodes
-    populateStates()
-  }
-
-  def loadFromFile(fileName: String, index: Int): Unit = {
-    val gameBuff: String = SgfParser.chopFromFile(fileName, index)
-    loadFromString(gameBuff)
-  }
-
+  /** called once on the root node to initialize global game properties */
   def populateStates(): Unit = {
-    //var it = PropertyMap::iterator it;
     var validSize = false
     var hasHandicap = false
 
@@ -234,7 +218,7 @@ class SgfTree {
     }
   }
 
-  def stringToVertex(moveString: String): Short = {
+  private def stringToVertex(moveString: String): Short = {
     if (moveString.length == 0) {
       return PASS
     }
@@ -262,12 +246,12 @@ class SgfTree {
   }
 
   /** copy the state of the specified tree into this one */
-  def copyState(tree: SgfTree): Unit = {
+  private def copyState(tree: SgfTree): Unit = {
     initialized = tree.initialized
     gameHistory = tree.gameHistory.copy()
   }
 
-  def applyMove(color: Byte, move: Short): Unit = {
+  private def applyMove(color: Byte, move: Short): Unit = {
     if (move != PASS && move != RESIGN) {
       val currSquare = gameHistory.getCurrentState.getBoard.getSquare(move)
       if (currSquare == otherColor(color) || currSquare ==INVALID) {
@@ -283,7 +267,7 @@ class SgfTree {
     gameHistory.getCurrentState.playMove(color, move)
   }
 
-  def applyMove(move: Short): Unit = applyMove(gameHistory.getCurrentState.getToMove, move)
+  private def applyMove(move: Short): Unit = applyMove(gameHistory.getCurrentState.getToMove, move)
   def addProperty(property: String, value: String): Unit = properties += property -> value
 
   def addChild(child: SgfTree): Unit = children :+= child
@@ -293,7 +277,7 @@ class SgfTree {
     children :+= tree
   }*/
 
-  def getMove(toMove: Byte): Short = {
+  private def getMove(toMove: Byte): Short = {
     val moveString = if (toMove == BLACK) "B" else "W"
     if (properties.contains(moveString)) stringToVertex(properties(moveString)) else EOT
   }
