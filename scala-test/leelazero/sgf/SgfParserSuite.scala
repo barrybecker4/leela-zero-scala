@@ -17,7 +17,7 @@ class SgfParserSuite extends FunSuite {
   }
 
   test("Parse sgf file") {
-    val tree = SgfParser.loadFromFile("games/2002-01-10-7.sgf")
+    val tree: SgfTree = SgfParser.loadFromFile("games/2002-01-10-7.sgf")
     assertResult(1) {tree.countMainlineMoves()}
     assertResult(true) {tree.isInitialized}
     assertResult(BLACK) {tree.getWinner}

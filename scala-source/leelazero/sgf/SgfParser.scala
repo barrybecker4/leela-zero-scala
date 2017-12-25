@@ -6,7 +6,7 @@ import SgfParser._
 object SgfParser {
 
   /** @return game tree loaded from specified string */
-  def loadFromString(gameBuff: String): Unit = {
+  def loadFromString(gameBuff: String): SgfTree = {
     val parser: SgfParser = new SgfParser()
 
     val stream = new ByteArrayInputStream(gameBuff.getBytes)
@@ -18,7 +18,8 @@ object SgfParser {
     sgfTree
   }
 
-  def loadFromFile(fileName: String, index: Short): Unit = {
+  /** load an SGF tree from the specified file */
+  def loadFromFile(fileName: String, index: Short = Short.MaxValue): SgfTree = {
     val parser: SgfParser = new SgfParser()
     val gameBuff: String = parser.chopFromFile(fileName, index)
     loadFromString(gameBuff)
