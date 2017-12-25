@@ -6,7 +6,7 @@ import SgfParser._
 object SgfParser {
 
   /** @return game tree loaded from specified string */
-  def loadFromString(gameBuff: String): Unit = {
+  def loadFromString(gameBuff: String): SgfTree = {
     val parser: SgfParser = new SgfParser()
 
     val stream = new ByteArrayInputStream(gameBuff.getBytes)
@@ -18,7 +18,7 @@ object SgfParser {
     sgfTree
   }
 
-  def loadFromFile(fileName: String, index: Short): Unit = {
+  def loadFromFile(fileName: String, index: Short = Short.MaxValue): SgfTree = {
     val parser: SgfParser = new SgfParser()
     val gameBuff: String = parser.chopFromFile(fileName, index)
     loadFromString(gameBuff)
@@ -83,8 +83,9 @@ class SgfParser {
     result
   }
 
-  private def chopAll(fileName: String, stopAt: Short): Seq[String] = {
-    val ins: InputStream = new FileInputStream(new File(fileName))
+  private def chopAll(fileName: String, stopAt: Short = Short.MaxValue): Seq[String] = {
+    val file: File = new File(this.getClass.getResource(fileName).getPath)
+    val ins: InputStream = new FileInputStream(file)
     val result = chopStream(ins, stopAt)
     ins.close()
     result
@@ -92,7 +93,7 @@ class SgfParser {
 
   private def chopFromFile(fileName: String, index: Short): String = {
     val vec = chopAll(fileName, index)
-    vec(index)
+    vec(Math.min(vec.length -1 , index))
   }
 
   // took StringReader, now PushbackReader
@@ -177,6 +178,7 @@ class SgfParser {
             do {
               val (success, propVal) = parsePropertyValue(strm)
               if (success) {
+                println("adding prop " + propName + " : " + propVal)
                 node.addProperty(propName, propVal)
               }
             } while (success)
@@ -221,7 +223,8 @@ class SgfParser {
 
   /** @return the number of games in the specified file  (i.e. the different branches) */
   def countGamesInFile(fileName: String): Int = {
-    val ins: InputStream = new FileInputStream(new File(fileName))
+    val file: File = new File(this.getClass.getResource(fileName).getPath)
+    val ins: InputStream = new FileInputStream(file)
     var count = 0
     var nesting = 0
     var done = false
