@@ -37,7 +37,9 @@ class SgfTree {
     gameHistory.getCurrentState
   }
 
-  /** @return the  child based on specified index, or null if none at that index */
+  def getNumChildren: Int = children.length
+
+  /** @return the child based on specified index, or null if none at that index */
   def getChild(count: Short): SgfTree = {
     if (count < children.length) {
       assert(initialized)
@@ -169,18 +171,21 @@ class SgfTree {
     }
 
     // initial handicap stones
-    var addBlacks = properties("AB")
+    val addBlacksValue: Option[String] = properties.get("AB")
 
     // Do we have a handicap specified but no handicap stones placed in
     // the same node? Then the SGF file is corrupt. Let's see if we can find
     // them in the next node, which is a common bug in some Go apps.
-    if (hasHandicap && addBlacks.isEmpty) {
+    var addBlacksList: Seq[String] = Seq()
+    if (hasHandicap && addBlacksValue.nonEmpty) {
+      var addBlacks = addBlacksValue.get
       if (children.nonEmpty) {
         val successor = children.head
         addBlacks = successor.properties("AB")
       }
+      addBlacksList = addBlacks.substring(1, addBlacks.length - 1).split("][")
+      println("adding blacks: " + addBlacksList.mkString(", "))
     }
-    val addBlacksList = addBlacks.substring(1, addBlacks.length - 1).split("][")
 
     // Loop through the stone list and apply
     for (move <- addBlacksList) {
@@ -189,11 +194,15 @@ class SgfTree {
     }
 
     // XXX: count handicap stones
-    var addWhites = properties("AW")
-    val addWhitesList = addWhites.substring(1, addWhites.length - 1).split("][")
-    for (move <- addWhitesList) {
-      val vtx: Short = stringToVertex(move)
-      applyMove(WHITE, vtx)
+    val addWhitesValue = properties.get("AW")
+    if (addWhitesValue.nonEmpty) {
+      var addWhites = addWhitesValue.get
+      val addWhitesList = addWhites.substring(1, addWhites.length - 1).split("][")
+      println("adding whites: " + addWhitesList.mkString(", "))
+      for (move <- addWhitesList) {
+        val vtx: Short = stringToVertex(move)
+        applyMove(WHITE, vtx)
+      }
     }
 
     if (properties.contains("PL")) {

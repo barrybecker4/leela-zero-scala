@@ -11,9 +11,10 @@ object SgfParser {
 
     val stream = new ByteArrayInputStream(gameBuff.getBytes)
     val sgfTree = parser.parse(new PushbackInputStream(stream)) // loads properties with moves
+    println("sgfTree = " + sgfTree)
     sgfTree.initState() // Set up the root state to defaults
 
-    // populates the states from the moves; split this up in root node, aNchor (handicap), other nodes
+    // populates the states from the moves; split this up in root node, anchor (handicap), other nodes
     sgfTree.populateStates()
     sgfTree
   }
@@ -48,7 +49,6 @@ class SgfParser {
       gameBuff += c
       if (c == '\\') {
         // read literal char
-        //ins >> c;
         c = ins.read().toChar
         gameBuff += c
         // Skip special char parsing
@@ -147,15 +147,16 @@ class SgfParser {
       val i = strm.read()
       if (i == -1) done = true
       else {
+        c = i.toChar
         if (c == ']') {
           done = true
         } else if (c == '\\') {
           c = strm.read().toChar
         }
-        result += c
+        if (!done) result += c
       }
-
     } while (!done)
+
     (true, result)
   }
 
@@ -163,6 +164,7 @@ class SgfParser {
     var splitPoint: Boolean = false
     var c: Char = ' '
     var node: SgfTree = new SgfTree()
+    val rootNode = node
     var done = false
 
     do {
@@ -173,53 +175,52 @@ class SgfParser {
         if (!c.isWhitespace) {
           if (c.isLetter && c.isUpper) {
             strm.unread(c)
-
             val propName = parsePropertyName(strm)
-            var success = true
+            var result: (Boolean, String) = (true, "")
             do {
-              val (success, propVal) = parsePropertyValue(strm)
-              if (success) {
-                println("adding prop " + propName + " : " + propVal)
-                node.addProperty(propName, propVal)
+              result = parsePropertyValue(strm)
+              if (result._1) {
+                println("adding prop " + propName + " : " + result._2)
+                node.addProperty(propName, result._2)
               }
-            } while (success)
-          } else {
-            if (c == '(') {
-              var cc: Char = ' '
-              do {
-                cc = strm.read().toChar
-              } while (cc.isSpaceChar)
-              if (cc != ';') { // eat first ;
-                strm.unread(cc)
-              }
-              // start a variation here
-              splitPoint = true
-              // new node
-              val childTree = parse(strm)
-              node.addChild(childTree)
-
-            } else if (c == ')') {
-              // variation ends, go back.
-              // If the variation didn't start here, then push the "variation ends" mark back
-              // and try again one level up the tree
-              if (!splitPoint) {
-                strm.unread(c)
-                return null
-              } else {
-                splitPoint = false // continue?
-              }
-            } else if (c == ';') {
-              // new node
-              val newNode = new SgfTree()
-              node.addChild(newNode)
-              node = newNode
-              // continue?
+            } while (result._1)
+          } else if (c == '(') {
+            var cc: Char = ' '
+            do {
+              cc = strm.read().toChar
+            } while (cc.isSpaceChar)
+            if (cc != ';') { // eat first ;
+              strm.unread(cc)
             }
+            // start a variation here
+            splitPoint = true
+            // new node
+            val childTree = parse(strm)
+            node.addChild(childTree)
+          } else if (c == ')') {
+            // variation ends, go back.
+            // If the variation didn't start here, then push the "variation ends" mark back
+            // and try again one level up the tree
+            if (!splitPoint) {
+              strm.unread(c)
+              println("tree read. returning. Numkids = " + node.getNumChildren)
+              return rootNode
+            } else {
+              splitPoint = false // continue?
+            }
+          } else if (c == ';') {
+            // new node
+            val newNode = new SgfTree()
+            println("Encountered ; adding new child node")
+            node.addChild(newNode)
+            node = newNode
+            // continue?
           }
         }
       }
     } while (!done)
-    node
+    println("returning tree = " + rootNode)
+    rootNode
   }
 
   /** @return the number of games in the specified file  (i.e. the different branches) */
