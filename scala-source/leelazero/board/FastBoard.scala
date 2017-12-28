@@ -55,8 +55,6 @@ object FastBoard {
 class FastBoard(size: Short = MAX_BOARD_SIZE) {
 
   protected var boardSize: Short = size
-  private var scoreMoves: Seq[MoveScore] = _
-
   protected var square: Array[Byte] = _    // Board contents
   protected var parentString: Array[Short] = _  // parent string of vertex
   protected var next: Array[Short] = _     // next stone in string
@@ -73,7 +71,6 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
   protected var extraDirections: Array[Int] = _ // movement in 8 directions
   protected var prisoners: Array[Int] = _       // prisoners per color
   protected var totalStones: Array[Int] = _     // total stones of a color on the board
-  private var criticalPoints: Seq[Short] = Seq() // queue of critical points  (use dropRight to pop)
   protected var emptySquares: Array[Short] = _  // empty squares
   protected var emptyIdices: Array[Int] = _     // indices of empty squares
   protected var emptyCount: Int = _
@@ -138,7 +135,6 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
     extraDirections = Array.ofDim[Int](8)
     prisoners = Array.ofDim[Int](2)
     totalStones = Array.ofDim[Int](2)
-    criticalPoints = Seq()
     emptySquares = Array.ofDim[Short](maxSq)
     emptyIdices = Array.ofDim[Int](maxSq)
     fbs = new FastBoardSerializer(this)

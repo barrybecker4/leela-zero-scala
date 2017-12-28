@@ -33,7 +33,7 @@ class GameHistory() {
 
   def copy(): GameHistory = {
     val newGhist = new GameHistory
-    newGhist.gameHistory = gameHistory.map(_.copy())
+    newGhist.gameHistory = gameHistory
     newGhist.currentState = gameHistory(moveNum)
     newGhist.timeControl = new TimeControl(timeControl)
     newGhist.moveNum = moveNum

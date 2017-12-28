@@ -60,13 +60,14 @@ class FullBoard(size: Short = MAX_BOARD_SIZE) extends FastBoard(size) {
     cp.square = this.square.map(identity)
     cp.emptyIdices = this.emptyIdices.map(identity)
     cp.emptyCount = this.emptyCount
-    cp.parentString = this.parentString
+    cp.parentString = this.parentString.map(identity)
     cp.stringLiberties = this.stringLiberties.map(identity)
     cp.stonesInString = this.stonesInString.map(identity)
     cp.neighbors = this.neighbors.map(identity)
-    cp.next = this.next
+    cp.next = this.next.map(identity)
     cp.prisoners = this.prisoners.map(identity)
     cp.totalStones = this.totalStones.map(identity)
+    cp.emptySquares = this.emptySquares.map(identity)
     cp.toMove = this.toMove
     cp.hash = this.getHash
     cp.koHash = this.getKoHash
@@ -185,9 +186,9 @@ class FullBoard(size: Short = MAX_BOARD_SIZE) extends FastBoard(size) {
 
     /* move last vertex in list to our position */
     emptyCount -= 1
-    val lastvertex = emptySquares(emptyCount)
-    emptyIdices(lastvertex) = emptyIdices(i)
-    emptySquares(emptyIdices(i)) = lastvertex
+    val lastVertex = emptySquares(emptyCount)
+    emptyIdices(lastVertex) = emptyIdices(i)
+    emptySquares(emptyIdices(i)) = lastVertex
 
     /* check whether we still live (i.e. detect suicide) */
     if (stringLiberties(parentString(i)) == 0) {

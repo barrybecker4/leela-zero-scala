@@ -76,7 +76,7 @@ class SgfTree {
     result
   }
 
-  /** @return the state at the specified move or final move if monve number not specified */
+  /** @return the state at the specified move or final move if move number not specified */
   def getStateFromMainline(movenum: Int = 999): KoState = {
     var link = this
     var last = this
@@ -275,7 +275,7 @@ class SgfTree {
       }
       assert(currSquare == EMPTY)
     }
-    gameHistory.getCurrentState.playMove(color, move)
+    gameHistory.playMove(color, move)
   }
 
   private def applyMove(move: Short): Unit = applyMove(gameHistory.getCurrentState.getToMove, move)
