@@ -5,7 +5,7 @@ import java.text.SimpleDateFormat
 import leelazero.Config.{PROGRAM_NAME, cfg_weightsfile}
 import leelazero.board.FastBoard._
 import leelazero.Config._
-import leelazero.board.{FastBoardSerializer, GameHistory, KoState}
+import leelazero.board.{FastBoard, FastBoardSerializer, GameHistory, KoState}
 import leelazero.sgf.SgfTree._
 
 
@@ -282,11 +282,6 @@ class SgfTree {
   def addProperty(property: String, value: String): Unit = properties += property -> value
 
   def addChild(child: SgfTree): Unit = children :+= child
-  /*
-  def addChild(): Unit = {
-    val tree = new SgfTree()
-    children :+= tree
-  }*/
 
   private def getMove(toMove: Byte): Short = {
     val moveString = if (toMove == BLACK) "B" else "W"
@@ -300,11 +295,12 @@ class SgfTree {
   def getMainline: Seq[Short] = {
     var moves = Seq[Short]()
     var link: SgfTree = this
-    var toMove = link.gameHistory.getCurrentState.getToMove
+    var toMove = FastBoard.otherColor(gameHistory.getCurrentState.getToMove)  // ? why is other color needed here?
     link = link.getChild(0)
 
     while (link != null && link.isInitialized) {
       val move = link.getMove(toMove)
+      println("move for " + toMove + " is " + move)
       if (move != EOT) moves :+= move    // append the move
       toMove = otherColor(toMove)
       link = link.getChild(0)
