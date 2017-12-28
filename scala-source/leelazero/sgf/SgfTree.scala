@@ -76,7 +76,8 @@ class SgfTree {
     result
   }
 
-  def getStateFromMainline(movenum: Int): KoState = {
+  /** @return the state at the specified move or final move if monve number not specified */
+  def getStateFromMainline(movenum: Int = 999): KoState = {
     var link = this
     var last = this
     var i = 0
@@ -295,6 +296,7 @@ class SgfTree {
   def getWinner: Byte = winner
   def isInitialized: Boolean =  initialized
 
+  /** @return sequence of moves in the main line of play recorded in the sgf */
   def getMainline: Seq[Short] = {
     var moves = Seq[Short]()
     var link: SgfTree = this

@@ -44,13 +44,12 @@ class GameHistory() {
 
   def resetGame(): Unit = {
     currentState.resetGame()
-    gameHistory = Seq()
-    gameHistory :+= currentState.copy()
+    gameHistory = Seq(currentState.copy())
     timeControl.resetClocks()
     moveNum = 0
   }
 
-  /** Move the state foward one move.
+  /** Move the state forward one move.
     * @return true if moved forward, false if already most current
     */
   def forwardMove(): Boolean = {

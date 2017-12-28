@@ -1,6 +1,7 @@
 package leelazero.sgf
 
 import java.io._
+import java.net.URL
 import SgfParser._
 
 object SgfParser {
@@ -11,7 +12,6 @@ object SgfParser {
 
     val stream = new ByteArrayInputStream(gameBuff.getBytes)
     val sgfTree = parser.parse(new PushbackInputStream(stream)) // loads properties with moves
-    println("sgfTree = " + sgfTree)
     sgfTree.initState() // Set up the root state to defaults
 
     // populates the states from the moves; split this up in root node, anchor (handicap), other nodes
@@ -85,8 +85,7 @@ class SgfParser {
   }
 
   private def chopAll(fileName: String, stopAt: Short = Short.MaxValue): Seq[String] = {
-    val file: File = new File(this.getClass.getResource(fileName).getPath)
-    val ins: InputStream = new FileInputStream(file)
+    val ins: InputStream = getInputStreamFromFile(fileName)
     val result = chopStream(ins, stopAt)
     ins.close()
     result
@@ -180,7 +179,7 @@ class SgfParser {
             do {
               result = parsePropertyValue(strm)
               if (result._1) {
-                println("adding prop " + propName + " : " + result._2)
+                //println("adding prop " + propName + " : " + result._2)
                 node.addProperty(propName, result._2)
               }
             } while (result._1)
@@ -203,7 +202,7 @@ class SgfParser {
             // and try again one level up the tree
             if (!splitPoint) {
               strm.unread(c)
-              println("tree read. returning. Numkids = " + node.getNumChildren)
+              //println("tree read. returning. Numkids = " + node.getNumChildren)
               return rootNode
             } else {
               splitPoint = false // continue?
@@ -211,7 +210,7 @@ class SgfParser {
           } else if (c == ';') {
             // new node
             val newNode = new SgfTree()
-            println("Encountered ; adding new child node")
+            //println("Encountered ; adding new child node")
             node.addChild(newNode)
             node = newNode
             // continue?
@@ -219,14 +218,13 @@ class SgfParser {
         }
       }
     } while (!done)
-    println("returning tree = " + rootNode)
+    //println("returning tree = " + rootNode)
     rootNode
   }
 
   /** @return the number of games in the specified file  (i.e. the different branches) */
   def countGamesInFile(fileName: String): Int = {
-    val file: File = new File(this.getClass.getResource(fileName).getPath)
-    val ins: InputStream = new FileInputStream(file)
+    val ins: InputStream = getInputStreamFromFile(fileName)
     var count = 0
     var nesting = 0
     var done = false
@@ -260,5 +258,12 @@ class SgfParser {
 
     ins.close()
     count
+  }
+
+  private def getInputStreamFromFile(fileName: String): InputStream = {
+    val url: URL = this.getClass.getResource(fileName)
+    if (url == null) throw new IllegalArgumentException("Could not find file: " + fileName)
+    val file: File = new File(url.getPath)
+    new FileInputStream(file)
   }
 }

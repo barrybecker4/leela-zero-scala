@@ -77,7 +77,7 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
   protected var emptySquares: Array[Short] = _  // empty squares
   protected var emptyIdices: Array[Int] = _     // indices of empty squares
   protected var emptyCount: Int = _
-  protected var toMove: Byte = _
+  protected var toMove: Byte = BLACK
   protected var maxSq: Short = _
   private var fbs: FastBoardSerializer = _
   resetBoard(boardSize)
@@ -412,7 +412,9 @@ class FastBoard(size: Short = MAX_BOARD_SIZE) {
 
   def blackToMove(): Boolean = toMove == BLACK
   def getToMove: Byte = toMove
-  def setToMove(tomove: Byte): Unit = { toMove = tomove }
+  def setToMove(tomove: Byte): Unit = {
+    this.toMove = tomove
+  }
 
   /** @return the id of the parent string */
   def getParentString(vertex: Short): Short = {
