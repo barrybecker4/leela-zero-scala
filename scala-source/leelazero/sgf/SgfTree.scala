@@ -105,7 +105,7 @@ class SgfTree {
   }
 
 
-  /** called once on the root node to initialize global game properties */
+  /** called on the root node, and then recursively on children, to initialize global game properties */
   def populateStates(): Unit = {
     var validSize = false
     var hasHandicap = false
@@ -185,7 +185,7 @@ class SgfTree {
         addBlacks = successor.properties("AB")
       }
       addBlacksList = addBlacks.substring(1, addBlacks.length - 1).split("][")
-      println("adding blacks: " + addBlacksList.mkString(", "))
+      //println("adding blacks: " + addBlacksList.mkString(", "))
     }
 
     // Loop through the stone list and apply
@@ -199,7 +199,7 @@ class SgfTree {
     if (addWhitesValue.nonEmpty) {
       var addWhites = addWhitesValue.get
       val addWhitesList = addWhites.substring(1, addWhites.length - 1).split("][")
-      println("adding whites: " + addWhitesList.mkString(", "))
+      //println("adding whites: " + addWhitesList.mkString(", "))
       for (move <- addWhitesList) {
         val vtx: Short = stringToVertex(move)
         applyMove(WHITE, vtx)
@@ -265,7 +265,7 @@ class SgfTree {
   private def applyMove(color: Byte, move: Short): Unit = {
     if (move != PASS && move != RESIGN) {
       val currSquare = gameHistory.getCurrentState.getBoard.getSquare(move)
-      if (currSquare == otherColor(color) || currSquare ==INVALID) {
+      if (currSquare == otherColor(color) || currSquare == INVALID) {
         throw new IllegalStateException("Illegal move: " + move)
       }
       // Playing on an occupied square is legal in SGF setup, but we can't really handle it.
@@ -295,7 +295,7 @@ class SgfTree {
   def getMainline: Seq[Short] = {
     var moves = Seq[Short]()
     var link: SgfTree = this
-    var toMove = FastBoard.otherColor(gameHistory.getCurrentState.getToMove)  // ? why is other color needed here?
+    var toMove = gameHistory.getCurrentState.getToMove
     link = link.getChild(0)
 
     while (link != null && link.isInitialized) {

@@ -80,19 +80,21 @@ class GameHistory() {
   def playPass(): Unit = currentState.playPass()
 
   def playMove(color: Byte, vertex: Short): Unit = {
+    val newCurrentState = currentState.copy()
     if (vertex != PASS && vertex != RESIGN) {
-      currentState.playMove(color, vertex)
+      newCurrentState.playMove(color, vertex)
     } else {
       playPass()
       if (vertex == RESIGN) {
-        currentState.resign()
+        newCurrentState.resign()
       }
     }
     moveNum += 1
+    currentState = newCurrentState
 
     // cut off any leftover moves from navigating
     gameHistory = gameHistory.take(moveNum)
-    gameHistory :+= currentState.copy()
+    gameHistory :+= currentState
   }
 
   def playTextMove(color: String, vertex: String): Boolean = {

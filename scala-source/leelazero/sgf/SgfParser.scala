@@ -205,7 +205,7 @@ class SgfParser {
               //println("tree read. returning. Numkids = " + node.getNumChildren)
               return rootNode
             } else {
-              splitPoint = false // continue?
+              splitPoint = false
             }
           } else if (c == ';') {
             // new node
@@ -213,12 +213,11 @@ class SgfParser {
             //println("Encountered ; adding new child node")
             node.addChild(newNode)
             node = newNode
-            // continue?
           }
         }
       }
     } while (!done)
-    //println("returning tree = " + rootNode)
+
     rootNode
   }
 

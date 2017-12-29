@@ -111,6 +111,115 @@ class SgfParserSuite extends FunSuite {
     }
   }
 
+  test("state from main line for 2002-01-10-7 (0)") {
+    val tree: SgfTree = SgfParser.loadFromFile("games/2002-01-10-7.sgf")
+    val koState = tree.getStateFromMainline(0)
+
+    assertResult(clean("""
+       |Passes: 0
+       |Black (X) Prisoners: 0
+       |White (O) Prisoners: 0
+       |White (O) to move
+       |   a b c d e f g h j k l m n o p q r s t
+       |19 . . . . . . . . . . . . . . . . . . . 19
+       |18 . . . . . . . . . . . . . . . . . . . 18
+       |17 . . . . . . . . . . . . . . . . . . . 17
+       |16 . . . + . . . . . + . . . . .(X). . . 16
+       |15 . . . . . . . . . . . . . . . . . . . 15
+       |14 . . . . . . . . . . . . . . . . . . . 14
+       |13 . . . . . . . . . . . . . . . . . . . 13
+       |12 . . . . . . . . . . . . . . . . . . . 12
+       |11 . . . . . . . . . . . . . . . . . . . 11
+       |10 . . . + . . . . . + . . . . . + . . . 10
+       | 9 . . . . . . . . . . . . . . . . . . .  9
+       | 8 . . . . . . . . . . . . . . . . . . .  8
+       | 7 . . . . . . . . . . . . . . . . . . .  7
+       | 6 . . . . . . . . . . . . . . . . . . .  6
+       | 5 . . . . . . . . . . . . . . . . . . .  5
+       | 4 . . . + . . . . . + . . . . . + . . .  4
+       | 3 . . . . . . . . . . . . . . . . . . .  3
+       | 2 . . . . . . . . . . . . . . . . . . .  2
+       | 1 . . . . . . . . . . . . . . . . . . .  1
+       |   a b c d e f g h j k l m n o p q r s t
+       |
+       |Hash: d7763639bf7df400 Ko-Hash: 9adbc5c365830b5a""")) {
+      koState.toString
+    }
+  }
+
+  test("state from main line for 2002-01-10-7 (2)") {
+    val tree: SgfTree = SgfParser.loadFromFile("games/2002-01-10-7.sgf")
+    val koState = tree.getStateFromMainline(2)
+
+    assertResult(clean("""
+     |Passes: 0
+     |Black (X) Prisoners: 0
+     |White (O) Prisoners: 0
+     |White (O) to move
+     |   a b c d e f g h j k l m n o p q r s t
+     |19 . . . . . . . . . . . . . . . . . . . 19
+     |18 . . . . . . . . . . . . . . . . . . . 18
+     |17 . . . . . . . . . . . . . . . . . . . 17
+     |16 . . . + . . . . . + . . . . . X . . . 16
+     |15 . . . . . . . . . . . . . . . . . . . 15
+     |14 . . . . . . . . . . . . . . . . . . . 14
+     |13 . . . . . . . . . . . . . . . . . . . 13
+     |12 . . . . . . . . . . . . . . . . . . . 12
+     |11 . . . . . . . . . . . . . . . . . . . 11
+     |10 . . . + . . . . . + . . . . . + . . . 10
+     | 9 . . . . . . . . . . . . . . . . . . .  9
+     | 8 . . . . . . . . . . . . . . . . . . .  8
+     | 7 . . . . . . . . . . . . . . . . . . .  7
+     | 6 . . . . . . . . . . . . . . . . . . .  6
+     | 5 . . . . . . . . . . . . . . . . . . .  5
+     | 4 . . . O . . . . . + . . . . .(X). . .  4
+     | 3 . . . . . . . . . . . . . . . . . . .  3
+     | 2 . . . . . . . . . . . . . . . . . . .  2
+     | 1 . . . . . . . . . . . . . . . . . . .  1
+     |   a b c d e f g h j k l m n o p q r s t
+     |
+     |Hash: 3a0cc2e0e335bc6e Ko-Hash: 77a1311a39cb4334""")) {
+      koState.toString
+    }
+  }
+
+  test("state from main line for 2002-01-10-7 (5)") {
+    val tree: SgfTree = SgfParser.loadFromFile("games/2002-01-10-7.sgf")
+    val koState = tree.getStateFromMainline(5)
+
+    assertResult(clean("""
+       |Passes: 0
+       |Black (X) Prisoners: 0
+       |White (O) Prisoners: 0
+       |Black (X) to move
+       |   a b c d e f g h j k l m n o p q r s t
+       |19 . . . . . . . . . . . . . . . . . . . 19
+       |18 . . . . . . . . . . . . . . . . . . . 18
+       |17 . . . . . . . . . . . . .(O). . . . . 17
+       |16 . . . O . . . . . + . . . . . X . . . 16
+       |15 . . . . . . . . . . . . . . . . . . . 15
+       |14 . . . . . . . . . . . . . . . . . . . 14
+       |13 . . . . . . . . . . . . . . . . . . . 13
+       |12 . . . . . . . . . . . . . . . . . . . 12
+       |11 . . . . . . . . . . . . . . . . . . . 11
+       |10 . . . + . . . . . + . . . . . + . . . 10
+       | 9 . . . . . . . . . . . . . . . . . . .  9
+       | 8 . . . . . . . . . . . . . . . . . . .  8
+       | 7 . . . . . . . . . . . . . . . . . . .  7
+       | 6 . . . . . . . . . . . . . . . . . . .  6
+       | 5 . . . . . . . . . . . . . . . . . . .  5
+       | 4 . . . O . . . . . + . . . . . X . . .  4
+       | 3 . . . . . X . . . . . . . . . . . . .  3
+       | 2 . . . . . . . . . . . . . . . . . . .  2
+       | 1 . . . . . . . . . . . . . . . . . . .  1
+       |   a b c d e f g h j k l m n o p q r s t
+       |
+       |Hash: 898958f1b9edd2f0 Ko-Hash: 6fe900c6c8de8667""")) {
+      koState.toString
+    }
+  }
+
+
   test("state from main line for 2002-01-10-7 (20)") {
     val tree: SgfTree = SgfParser.loadFromFile("games/2002-01-10-7.sgf")
     val koState = tree.getStateFromMainline(20)
