@@ -39,7 +39,43 @@ class SgfParserSuite extends FunSuite {
     verify("variation_matches.sgf", SgfResult(320, 1, WHITE))
   }
 
-  test("follow main line state for simple_match") {
+  test("follow main line state for simple_match (first 3 moves") {
+    val tree: SgfTree = SgfParser.loadFromFile("games/simple_match.sgf")
+    val koState = tree.followMainlineState(3)
+
+    assertResult(clean("""
+                         |Passes: 0
+                         |Black (X) Prisoners: 0
+                         |White (O) Prisoners: 0
+                         |White (O) to move
+                         |   a b c d e f g h j k l m n o p q r s t
+                         |19 . . . . . . . . . . . . . . . . . . . 19
+                         |18 . . . . . . . . . . . . . . . . . . . 18
+                         |17 . . . . . . . . . . . . . . . . . . . 17
+                         |16 . . . X . . . . . + . . . . . + . . . 16
+                         |15 . . . . . . . . . . . . . . . . . . . 15
+                         |14 . . . . . . . . . . . . . . . . . . . 14
+                         |13 . . . . . . . . . . . . . . . . . . . 13
+                         |12 . . . . . . . . . . . . . . . . . . . 12
+                         |11 . . . . . . . . . . . . . . . . . . . 11
+                         |10 . . . + . . . . . + . . . . . + . . . 10
+                         | 9 . . . . . . . . . . . . . . . . . . .  9
+                         | 8 . . . . . . . . . . . . . . . . . . .  8
+                         | 7 . . . . . . . . . . . . . . . . . . .  7
+                         | 6 . . . . . . . . . . . . . . . . . . .  6
+                         | 5 . . . . . . . . . . . . . . . . . . .  5
+                         | 4 . . .(X). . . . . + . . . . . O . . .  4
+                         | 3 . . . . . . . . . . . . . . . . . . .  3
+                         | 2 . . . . . . . . . . . . . . . . . . .  2
+                         | 1 . . . . . . . . . . . . . . . . . . .  1
+                         |   a b c d e f g h j k l m n o p q r s t
+                         |
+                         |Hash: adfe095388af547e Ko-Hash: e053faa95251ab24""")) {
+      koState.toString
+    }
+  }
+
+  test("follow main line state for simple_match (first 40 moves\")") {
     val tree: SgfTree = SgfParser.loadFromFile("games/simple_match.sgf")
     val koState = tree.followMainlineState(40)
 
@@ -119,12 +155,12 @@ class SgfParserSuite extends FunSuite {
        |Passes: 0
        |Black (X) Prisoners: 0
        |White (O) Prisoners: 0
-       |White (O) to move
+       |Black (X) to move
        |   a b c d e f g h j k l m n o p q r s t
        |19 . . . . . . . . . . . . . . . . . . . 19
        |18 . . . . . . . . . . . . . . . . . . . 18
        |17 . . . . . . . . . . . . . . . . . . . 17
-       |16 . . . + . . . . . + . . . . .(X). . . 16
+       |16 . . . + . . . . . + . . . . . + . . . 16
        |15 . . . . . . . . . . . . . . . . . . . 15
        |14 . . . . . . . . . . . . . . . . . . . 14
        |13 . . . . . . . . . . . . . . . . . . . 13
@@ -142,7 +178,7 @@ class SgfParserSuite extends FunSuite {
        | 1 . . . . . . . . . . . . . . . . . . .  1
        |   a b c d e f g h j k l m n o p q r s t
        |
-       |Hash: d7763639bf7df400 Ko-Hash: 9adbc5c365830b5a""")) {
+       |Hash: 26f03c7022b1f5c5 Ko-Hash: c09064475382a152""")) {
       koState.toString
     }
   }
@@ -155,7 +191,7 @@ class SgfParserSuite extends FunSuite {
      |Passes: 0
      |Black (X) Prisoners: 0
      |White (O) Prisoners: 0
-     |White (O) to move
+     |Black (X) to move
      |   a b c d e f g h j k l m n o p q r s t
      |19 . . . . . . . . . . . . . . . . . . . 19
      |18 . . . . . . . . . . . . . . . . . . . 18
@@ -172,13 +208,13 @@ class SgfParserSuite extends FunSuite {
      | 7 . . . . . . . . . . . . . . . . . . .  7
      | 6 . . . . . . . . . . . . . . . . . . .  6
      | 5 . . . . . . . . . . . . . . . . . . .  5
-     | 4 . . . O . . . . . + . . . . .(X). . .  4
+     | 4 . . .(O). . . . . + . . . . . + . . .  4
      | 3 . . . . . . . . . . . . . . . . . . .  3
      | 2 . . . . . . . . . . . . . . . . . . .  2
      | 1 . . . . . . . . . . . . . . . . . . .  1
      |   a b c d e f g h j k l m n o p q r s t
      |
-     |Hash: 3a0cc2e0e335bc6e Ko-Hash: 77a1311a39cb4334""")) {
+     |Hash: 85993e8898b7434f Ko-Hash: 63f966bfe98417d8""")) {
       koState.toString
     }
   }
@@ -191,11 +227,11 @@ class SgfParserSuite extends FunSuite {
        |Passes: 0
        |Black (X) Prisoners: 0
        |White (O) Prisoners: 0
-       |Black (X) to move
+       |White (O) to move
        |   a b c d e f g h j k l m n o p q r s t
        |19 . . . . . . . . . . . . . . . . . . . 19
        |18 . . . . . . . . . . . . . . . . . . . 18
-       |17 . . . . . . . . . . . . .(O). . . . . 17
+       |17 . . . . . . . . . . . . . . . . . . . 17
        |16 . . . O . . . . . + . . . . . X . . . 16
        |15 . . . . . . . . . . . . . . . . . . . 15
        |14 . . . . . . . . . . . . . . . . . . . 14
@@ -209,12 +245,12 @@ class SgfParserSuite extends FunSuite {
        | 6 . . . . . . . . . . . . . . . . . . .  6
        | 5 . . . . . . . . . . . . . . . . . . .  5
        | 4 . . . O . . . . . + . . . . . X . . .  4
-       | 3 . . . . . X . . . . . . . . . . . . .  3
+       | 3 . . . . .(X). . . . . . . . . . . . .  3
        | 2 . . . . . . . . . . . . . . . . . . .  2
        | 1 . . . . . . . . . . . . . . . . . . .  1
        |   a b c d e f g h j k l m n o p q r s t
        |
-       |Hash: 898958f1b9edd2f0 Ko-Hash: 6fe900c6c8de8667""")) {
+       |Hash: ebdf3f74b437e606 Ko-Hash: a672cc8e6ec9195c""")) {
       koState.toString
     }
   }
@@ -228,7 +264,7 @@ class SgfParserSuite extends FunSuite {
        |Passes: 0
        |Black (X) Prisoners: 0
        |White (O) Prisoners: 0
-       |White (O) to move
+       |Black (X) to move
        |   a b c d e f g h j k l m n o p q r s t
        |19 . . . . . . . . . . . . . . . . . . . 19
        |18 . . . . . . . . . . . . . . . . . . . 18
@@ -244,14 +280,14 @@ class SgfParserSuite extends FunSuite {
        | 8 . . . . . . . . . . . . . . . . . . .  8
        | 7 . . . . . . . . . . . . . . . . . . .  7
        | 6 . . . X . . . . . . . . . . . . . . .  6
-       | 5 . O . O . O O . . . . . . . . . . . .  5
-       | 4 . X(X)O . O X X . + . . . . . X . . .  4
+       | 5 .(O). O . O O . . . . . . . . . . . .  5
+       | 4 . X . O . O X X . + . . . . . X . . .  4
        | 3 . . . X X X . . . . . . . . . . . . .  3
        | 2 . . . . . . . . . . . . . . . . . . .  2
        | 1 . . . . . . . . . . . . . . . . . . .  1
        |   a b c d e f g h j k l m n o p q r s t
        |
-       |Hash: 1947dd9ba124d9bc Ko-Hash: 54ea2e617bda26e6""")) {
+       |Hash: fefeb1c0455ce51f Ko-Hash: 189ee9f7346fb188""")) {
       koState.toString
     }
   }
@@ -264,7 +300,7 @@ class SgfParserSuite extends FunSuite {
        |Passes: 0
        |Black (X) Prisoners: 4
        |White (O) Prisoners: 2
-       |White (O) to move
+       |Black (X) to move
        |   a b c d e f g h j k l m n o p q r s t
        |19 . . . . . . . . . . . . . . . . . . . 19
        |18 . . X X O O . . . . . . . O X . . . . 18
@@ -276,9 +312,9 @@ class SgfParserSuite extends FunSuite {
        |12 . X X X O X . . . . O . . . . . . . . 12
        |11 X . X O X O O . . . O X . X . . . . . 11
        |10 . X O O X . O X . + O X . . . + . . . 10
-       | 9 . O O . X . O . . O X X . O .(X). . .  9
+       | 9 . O O . X . O . . O X X . O . . . . .  9
        | 8 . . . . . . . . O . . . . . . . . . .  8
-       | 7 . . . . . . . X X X . X O O . O O . .  7
+       | 7 . . . . . . . X X X . X(O)O . O O . .  7
        | 6 . . . X . . O O X . . . . . X X X . .  6
        | 5 . O O O O O O X O O . . O O . . . . .  5
        | 4 . X X O X O X X . + O . . X O X . . .  4
@@ -287,7 +323,7 @@ class SgfParserSuite extends FunSuite {
        | 1 . . . . . . . . . . . . . . . . . . .  1
        |   a b c d e f g h j k l m n o p q r s t
        |
-       |Hash: 8c5381e6233890c5 Ko-Hash: e7cfb74a9c3088b1""")) {
+       |Hash: c6375ccb39364391 Ko-Hash: 666c1aa2df3f028""")) {
       koState.toString
     }
   }

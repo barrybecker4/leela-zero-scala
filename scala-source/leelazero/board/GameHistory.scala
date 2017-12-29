@@ -9,7 +9,7 @@ import leelazero.util.Utils._
 /** Keeps track of all the moves played for this game */
 class GameHistory() {
 
-  private var currentState: KoState = _
+  private var currentState: KoState = _  // the most recent game state
   private var gameHistory: Seq[KoState] = Seq()
   private var timeControl: TimeControl = _
   private var moveNum = 0

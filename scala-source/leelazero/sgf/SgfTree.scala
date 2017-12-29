@@ -55,6 +55,7 @@ class SgfTree {
     var link: SgfTree = this
     // This initializes a starting state from a KoState and sets up the game history.
     val result: KoState = getState
+    println("initial state = " + result.toString)
 
     var i = 0
     while (i <= movenum && link != null) {
@@ -81,7 +82,7 @@ class SgfTree {
     var link = this
     var last = this
     var i = 0
-    while (i <= movenum && link != null) {
+    while (i < movenum && link != null) { // changed <= to < to be consistent with followMainlinestate
       link = link.getChild(0)
       if (link == null) {
         return last.getState
@@ -300,7 +301,6 @@ class SgfTree {
 
     while (link != null && link.isInitialized) {
       val move = link.getMove(toMove)
-      println("move for " + toMove + " is " + move)
       if (move != EOT) moves :+= move    // append the move
       toMove = otherColor(toMove)
       link = link.getChild(0)
