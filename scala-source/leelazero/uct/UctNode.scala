@@ -62,7 +62,7 @@ class UctNode(var vertex: Short, var score: Float) {
       isExpanding = true
     }
 
-    val rawNetList = Network.getScoredMoves(history, Network.ENSEMBLE_RANDOM_ROTATION)
+    val rawNetList = Network.getInstance().getScoredMoves(history, Network.ENSEMBLE_RANDOM_ROTATION)
 
     // DCNN returns winrate as side to move
     var netEval: Float = rawNetList._2

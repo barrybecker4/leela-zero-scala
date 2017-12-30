@@ -3,23 +3,31 @@ package leelazero.network
 import leelazero.board.FastBoard._
 import leelazero.util.Utils.myPrint
 import leelazero._
-import leelazero.board.{FastBoardSerializer, GameHistory, KoState}
+import leelazero.board.{FastBoard, FastBoardSerializer, GameHistory, KoState}
 import leelazero.util.Timing
 import org.bytedeco.javacpp.mkl_rt._
 
 import scala.collection.mutable
 import scala.io.Source
 import scala.util.Random
+import Network._
 
-/** The neural network - evaluated using the Open Cuda Library (OCL) and OpenBLAS */
+
+/**
+  * The neural network - evaluated using the Open Cuda Library (OCL) and OpenBLAS
+  * All static methods - shoudl they be?
+  */
 object Network {
   val ENSEMBLE_DIRECT: Ensemble = 1
   val ENSEMBLE_RANDOM_ROTATION: Ensemble = 2
 
+  // singleton instance. Access with getInstance
+  private var instance: Option[Network] = None
+
   // File format version
-  val FORMAT_VERSION = 1
-  val INPUT_CHANNELS = 18
-  var RND = new Random()
+  private val FORMAT_VERSION = 1
+  private val INPUT_CHANNELS = 18
+  private var RND = new Random()
   RND.setSeed(1)
 
   val OPEN_CL: OpenCL = new OpenCL()
@@ -31,54 +39,64 @@ object Network {
   val IP1_VAL_W_LEN = 92416
   val IP1_VAL_B_LEN = 256
   val IP2_VAL_W_LEN = 256
-  val BOARD_SIZE = 19
-  val BOARD_SQ: Int = BOARD_SIZE * BOARD_SIZE  // 361
+  val BOARD_SIZE: Short = FastBoard.MAX_BOARD_SIZE
+  val BOARD_SQ: Int = BOARD_SIZE * BOARD_SIZE // 361
   //val ALL_SET = mutable.BitSet(1 to BOARD_SQ: _*)
   val FLOAT_SIZE = 4 // number of bytes in a float
 
   type NetWeight = Float
   type Ensemble = Int
-  type ScoredNode = Tuple2[Float, Short]
-  type NetResult = Tuple2[Seq[ScoredNode], Float]
-
+  type ScoredNode = (Float, Short)
+  type NetResult = (Seq[ScoredNode], Float)
   type BoardPlane = mutable.BitSet
   type NNPlanes = Seq[BoardPlane]
 
-  def createNNPlanes(): NNPlanes = {
+  /** @return singleton instance. Initialized lazily */
+  def getInstance(): Network = {
+    if (instance.isEmpty) {
+      instance = Some(new Network())
+    }
+    instance.get
+  }
+
+  private def createNNPlanes(): NNPlanes = {
     for (i <- 0 to 18) yield new mutable.BitSet() // 19*19
   }
 
-  def lambdaReLU(value: Float): Float = if (value > 0.0f) value else 0.0f
+  private def lambdaReLU(value: Float): Float = if (value > 0.0f) value else 0.0f
+}
 
 
-  // all static methods?
+class Network {
 
   // Input + residual block tower
-  var convWeights: Seq[Seq[NetWeight]] = _
-  var convBiases: Seq[Seq[NetWeight]] = _
-  var batchNormMeans: Seq[Seq[NetWeight]] = _
-  var batchNormVariances: Seq[Seq[NetWeight]] = _
+  private var convWeights: Seq[Seq[NetWeight]] = _
+  private var convBiases: Seq[Seq[NetWeight]] = _
+  private var batchNormMeans: Seq[Seq[NetWeight]] = _
+  private var batchNormVariances: Seq[Seq[NetWeight]] = _
 
   // Policy head
-  var convPolicyW: Seq[NetWeight] = _
-  var convPolicyB: Seq[NetWeight] = _
-  val bnPolicyW1: Array[NetWeight] = Array.ofDim[NetWeight](2)
-  val bnPolicyW2: Array[NetWeight] = Array.ofDim[NetWeight](2)
+  private var convPolicyW: Seq[NetWeight] = _
+  private var convPolicyB: Seq[NetWeight] = _
+  private val bnPolicyW1: Array[NetWeight] = Array.ofDim[NetWeight](2)
+  private val bnPolicyW2: Array[NetWeight] = Array.ofDim[NetWeight](2)
 
-  val ipPolicyW: Array[NetWeight] = Array.ofDim[NetWeight](IP_POLICY_W_LEN)
-  val ipPolicyB: Array[NetWeight] = Array.ofDim[NetWeight](IP_POLICY_B_LEN)
+  private val ipPolicyW: Array[NetWeight] = Array.ofDim[NetWeight](IP_POLICY_W_LEN)
+  private val ipPolicyB: Array[NetWeight] = Array.ofDim[NetWeight](IP_POLICY_B_LEN)
 
   // Value head
-  var convValW: Seq[NetWeight] = _
-  var convValB: Seq[NetWeight] = _
-  var bnValW1: Array[NetWeight] = Array.ofDim[NetWeight](1)
-  var bnValW2: Array[NetWeight] = Array.ofDim[NetWeight](1)
+  private var convValW: Seq[NetWeight] = _
+  private var convValB: Seq[NetWeight] = _
+  private var bnValW1: Array[NetWeight] = Array.ofDim[NetWeight](1)
+  private var bnValW2: Array[NetWeight] = Array.ofDim[NetWeight](1)
 
-  val ip1ValW: Array[NetWeight] = Array.ofDim[NetWeight](IP1_VAL_W_LEN)
-  val ip1ValB: Array[NetWeight] = Array.ofDim[NetWeight](IP1_VAL_B_LEN)
+  private val ip1ValW: Array[NetWeight] = Array.ofDim[NetWeight](IP1_VAL_W_LEN)
+  private val ip1ValB: Array[NetWeight] = Array.ofDim[NetWeight](IP1_VAL_B_LEN)
 
-  val ip2ValW: Array[NetWeight] = Array.ofDim[NetWeight](IP2_VAL_W_LEN)
-  val ip2ValB: Array[NetWeight] = Array.ofDim[NetWeight](1)
+  private val ip2ValW: Array[NetWeight] = Array.ofDim[NetWeight](IP2_VAL_W_LEN)
+  private val ip2ValB: Array[NetWeight] = Array.ofDim[NetWeight](1)
+
+  initialize()
 
   def benchmark(history: GameHistory): Unit = {
     val BENCH_AMOUNT = 1600
@@ -106,7 +124,7 @@ object Network {
   }
 
   // ifdef USE_OPENCL
-  def initialize(): Unit = {
+  private def initialize(): Unit = {
     myPrint("Initializing OpenCL\n")
     OPEN_CL.initialize()
 
@@ -145,22 +163,20 @@ object Network {
     // The rest are residuals, every residual has 8 x weight lines
     var residualBlocks = lineCount - (1 + 4 + 14)
     if (residualBlocks % 8 != 0) {
-      myPrint("\nInconsistent number of weights in the file. Residula blocks = " + residualBlocks)
+      myPrint("\nInconsistent number of weights in the file. Residual blocks = " + residualBlocks)
       System.exit(0)
     }
     residualBlocks /= 8
     myPrint(f"$residualBlocks%d blocks\nTransferring weights to GPU...")
 
     // Re-read file and process
-    var plainConvLayers = 1 + (residualBlocks * 2)
-    var plainConvWts = plainConvLayers * 4
+    val plainConvLayers = 1 + (residualBlocks * 2)
+    val plainConvWts = plainConvLayers * 4
     lineCount = 0
     lines = lines.drop(1) // skip the file format id on first line
 
     for (line <- lines) {
-
       //var weight: Float = 0
-
       val weights: Seq[NetWeight] = line.split(" ").map(_.toFloat)
 
       if (lineCount < plainConvWts) {
@@ -315,8 +331,8 @@ object Network {
     }
   } // endif #USE_BLAS
 
-  def softMax(input: Seq[NetWeight], output: Array[NetWeight], temperature: Float): Unit = {
-    assert(input != output)
+  private def softMax(input: Array[NetWeight], output: Array[NetWeight], temperature: Float): Unit = {
+    assert(!(input sameElements output))
 
     var alpha = input.take(output.length).max      //*std::max_element(input.begin(), input.begin() + output.size())
     alpha /= temperature
@@ -356,7 +372,7 @@ object Network {
     result
   }
 
-  def getScoredMovesInternal(history: GameHistory, planes: NNPlanes, rotation: Int): NetResult = {
+  private def getScoredMovesInternal(history: GameHistory, planes: NNPlanes, rotation: Int): NetResult = {
 
     assert(rotation >= 0 && rotation <= 7)
     assert(INPUT_CHANNELS == planes.length)
@@ -535,7 +551,7 @@ object Network {
   }
 
   /** @return a new index in the range [0, 19*19) */
-  def rotateNnIdx(vertex: Int, symmetry: Int): Int = {
+  private def rotateNnIdx(vertex: Int, symmetry: Int): Int = {
     assert(vertex >= 0 && vertex < BOARD_SQ)
     assert(symmetry >= 0 && symmetry < 8)
     var symm = symmetry
@@ -566,8 +582,8 @@ object Network {
       newy = 19 - y - 1
     }
 
-    val newvtx = (newy * 19) + newx
-    assert(newvtx >= 0 && newvtx < BOARD_SQ)
-    newvtx
+    val newVtx = (newy * 19) + newx
+    assert(newVtx >= 0 && newVtx < BOARD_SQ)
+    newVtx
   }
 }

@@ -5,7 +5,7 @@ object SearchResult {
 
   def fromScore(score: Float): SearchResult = {
     if (score > 0.0f) SearchResult(1.0f)
-    else if (score < 0.0f) SearchResult(0.0f)
+    else if (score < 0.0f) SearchResult()
     else SearchResult(0.5f)
   }
 }
