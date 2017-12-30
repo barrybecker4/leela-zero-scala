@@ -5,12 +5,14 @@ import leelazero.uct.UctSearch
 import leelazero.util.TimeControl
 import leelazero.util.Utils._
 
+import scala.collection.mutable.ArrayBuffer
+
 
 /** Keeps track of all the moves played for this game */
 class GameHistory() {
 
   private var currentState: KoState = _  // the most recent game state
-  private var gameHistory: Seq[KoState] = Seq()
+  private var gameHistory: ArrayBuffer[KoState] = ArrayBuffer()
   private var timeControl: TimeControl = _
   private var moveNum = 0
 
@@ -19,14 +21,14 @@ class GameHistory() {
 
   def initHistory(size: Short, komi: Float) {
     currentState = new KoState(size, komi)
-    gameHistory = Seq(currentState)
+    gameHistory = ArrayBuffer(currentState)
     timeControl = new TimeControl(size)
     moveNum = 0
   }
 
   def initHistory(state: KoState) {
     currentState = state.copy()
-    gameHistory = Seq(currentState)
+    gameHistory = ArrayBuffer(currentState)
     timeControl = new TimeControl(state.size)
     moveNum = 0
   }
@@ -44,7 +46,7 @@ class GameHistory() {
 
   def resetGame(): Unit = {
     currentState.resetGame()
-    gameHistory = Seq(currentState.copy())
+    gameHistory = ArrayBuffer(currentState.copy())
     timeControl.resetClocks()
     moveNum = 0
   }
@@ -93,8 +95,12 @@ class GameHistory() {
     currentState = newCurrentState
 
     // cut off any leftover moves from navigating
-    gameHistory = gameHistory.take(moveNum)
-    gameHistory :+= currentState
+    //gameHistory = gameHistory.take(moveNum)
+    //gameHistory :+= currentState
+    if (moveNum < gameHistory.length) {
+      gameHistory.remove(moveNum, gameHistory.length - moveNum)
+    }
+    gameHistory.append(currentState)
   }
 
   def playTextMove(color: String, vertex: String): Boolean = {
@@ -149,13 +155,16 @@ class GameHistory() {
   def anchorGameHistory(): Unit = {
     // handicap moves don't count in game history
     moveNum = 0
-    gameHistory = Seq()
-    gameHistory :+= currentState.copy()
+    gameHistory = ArrayBuffer()
+    gameHistory.append(currentState.copy())
   }
 
   def trimGameHistory(lastMove: Short): Unit = {
     moveNum = lastMove - 1
-    gameHistory = gameHistory.take(lastMove)
+    //gameHistory = gameHistory.take(lastMove)
+    if (lastMove < gameHistory.length) {
+      gameHistory.remove(lastMove, gameHistory.length - lastMove)
+    }
   }
 
   def setFixedHandicap(handi: Short): Boolean = {

@@ -1,7 +1,7 @@
 package leelazero.sgf
 
-import java.text.SimpleDateFormat
-
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import leelazero.Config.{PROGRAM_NAME, cfg_weightsfile}
 import leelazero.board.FastBoard._
 import leelazero.Config._
@@ -14,9 +14,91 @@ object SgfTree {
   val EOT: Short = 0
 
   /** For printing dates in ISO format */
-  val ISO_DATE_FORMAT: SimpleDateFormat = new SimpleDateFormat("yyyy-mm-dd")
+  val ISO_DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd") // new SimpleDateFormat("yyyy-mm-dd")
+
+
+  /** Serialize the entire game from its history - just the main line, not branches. */
+  def stateToString(pstate: GameHistory, compColor: Byte,
+                    date: String = ISO_DATE_FORMAT.format(LocalDate.now)): String = {
+    val state = pstate.copy()
+    var header = ""
+    var moves = ""
+
+    val komi = state.getCurrentState.komi
+    val size = state.getCurrentState.size
+
+    header += "(;GM[1]FF[4]RU[Chinese]"
+    header += "DT[" + date + "]"
+    header += "SZ[" + size + "]"
+    header += f"KM[$komi%.1f]"
+
+    var leelaName = PROGRAM_NAME
+    leelaName += " " + PROGRAM_VERSION
+    if (cfg_weightsfile.isDefined) {
+      leelaName += " " + cfg_weightsfile.get.substring(0, 8)
+    }
+
+    if (compColor == WHITE) {
+      header += "PW[" + leelaName + "]PB[Human]"
+    } else {
+      header += "PB[" + leelaName + "]PW[Human]"
+    }
+    state.rewind()
+
+    // check handicap here (anchor point)
+    var handicap: Int = 0
+    var handicapStr = ""
+    val board = state.getCurrentState.getBoard
+    val bs = new FastBoardSerializer(board)
+    for (i <- 0 until size) {
+      for (j <- 0 until size) {
+        val vertex = board.getVertex(i, j)
+        val square = board.getSquare(vertex)
+        if (square == BLACK) {
+          handicap += 1
+          handicapStr += "[" + bs.moveToTextSgf(vertex) + "]"
+        }
+      }
+    }
+
+    if (handicap > 0) {
+      header += "HA[" + handicap + "]"
+      moves += "AB" + handicapStr
+    }
+
+    moves += "\n"
+    var counter: Int = 0
+
+    while (state.forwardMove()) {
+      val move = state.getCurrentState.getLastMove
+      if (move != RESIGN) {
+        val moveStr = bs.moveToTextSgf(move)
+        if (state.getCurrentState.getToMove == BLACK) {
+          moves += ";W[" + moveStr + "]"
+        } else {
+          moves += ";B[" + moveStr + "]"
+        }
+        counter += 1
+        if (counter % 10 == 0) moves += "\n"
+      }
+    }
+
+    if (state.getCurrentState.getLastMove != RESIGN) {
+      var score = state.getCurrentState.finalScore
+      if (score > 0.0f) header += f"RE[B+$score%.1f]"
+      else header += f"RE[W+${-score}%.1f]"
+    } else {
+      // Last move was resign, so side to move won
+      if (state.getCurrentState.getToMove == BLACK) header += "RE[B+Resign]"
+      else header += "RE[W+Resign]"
+    }
+    header + "\n" + moves + ")\n"
+  }
 }
 
+/**
+  * In memory representation of a parsed SGF file.
+  */
 class SgfTree {
 
   private var initialized = false
@@ -82,7 +164,7 @@ class SgfTree {
     var link = this
     var last = this
     var i = 0
-    while (i < movenum && link != null) { // changed <= to < to be consistent with followMainlinestate
+    while (i < movenum && link != null) { // changed <= to < to be consistent with followMainlineState
       link = link.getChild(0)
       if (link == null) {
         return last.getState
@@ -107,7 +189,7 @@ class SgfTree {
 
 
   /** called on the root node, and then recursively on children, to initialize global game properties */
-  def populateStates(): Unit = {
+  private[sgf] def populateStates(): Unit = {
     var validSize = false
     var hasHandicap = false
 
@@ -308,85 +390,6 @@ class SgfTree {
     moves
   }
 
-  /** Serialize the entire game from its history */
-  def stateToString(pstate: GameHistory, compColor: Byte): String = {
-    val state = pstate.copy()
-    //*state = pstate; // make a working copy ???
-
-    var header = ""
-    var moves = ""
-
-    val komi = state.getCurrentState.komi
-    val size = state.getCurrentState.size
-    val now = ISO_DATE_FORMAT.format( java.time.LocalDate.now)
-    println("now = " + now)
-
-    header += "(;GM[1]FF[4]RU[Chinese]"
-    header += "DT[" + now + "]"
-    header += "SZ[" + size + "]"
-    header += f"KM[$komi%.1f]"
-
-    var leelaName = PROGRAM_NAME
-    leelaName += " " + PROGRAM_VERSION
-    if (cfg_weightsfile.isDefined) {
-      leelaName += " " + cfg_weightsfile.get.substring(0, 8)
-    }
-
-    if (compColor == WHITE) {
-      header += "PW[" + leelaName + "]PB[Human]"
-    } else {
-      header += "PB[" + leelaName + "]PW[Human]"
-    }
-    state.rewind()
-
-    // check handicap here (anchor point)
-    var handicap: Int = 0
-    var handicapStr = ""
-    val board = gameHistory.getCurrentState.getBoard
-    val bs = new FastBoardSerializer(board)
-    for (i <- 0 until size) {
-      for (j <- 0 until size) {
-        val vertex = board.getVertex(i, j)
-        val square = board.getSquare(vertex)
-        if (square == BLACK) {
-          handicap += 1
-          handicapStr += "[" + bs.moveToTextSgf(vertex) + "]"
-        }
-      }
-    }
-
-    if (handicap > 0) {
-      header += "HA[" + handicap + "]"
-      moves += "AB" + handicapStr
-    }
-
-    moves += "\n"
-    var counter: Int = 0
-
-    while (gameHistory.forwardMove()) {
-      val move = gameHistory.getCurrentState.getLastMove
-      if (move != RESIGN) {
-        var movestr = bs.moveToTextSgf(move)
-        if (gameHistory.getCurrentState.getToMove == BLACK) {
-          moves += ";W[" + movestr + "]"
-        } else {
-          moves += ";B[" + movestr + "]"
-        }
-        counter += 1
-        if (counter % 10 == 0) moves += "\n"
-      }
-    }
-
-    if (gameHistory.getCurrentState.getLastMove != RESIGN) {
-      var score = gameHistory.getCurrentState.finalScore
-      if (score > 0.0f) header += f"RE[B+$score%.1f]"
-      else header += s"RE[W+${-score}}%.1f]"
-    } else {
-      // Last move was resign, so side to move won
-      if (gameHistory.getCurrentState.getToMove == BLACK) header += "RE[B+Resign]"
-      else header += "RE[W+Resign]"
-
-    }
-    header + "\n" + moves + ")\n"
-  }
+  override def toString: String =
+    stateToString(this.gameHistory, BLACK, this.properties.getOrElse("DT", ISO_DATE_FORMAT.format(LocalDate.now)))
 }
