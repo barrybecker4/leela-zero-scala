@@ -63,7 +63,7 @@ class OpenCLNetwork {
     val context = OPEN_CL.context
     val bufferWeights: cl_mem =
       clCreateBuffer(context, CL_MEM_COPY_HOST_PTR | CL_MEM_READ_ONLY, weightSize, Pointer.to(convertedWeights), null)
-      ////new Buffer(CL_MEM_COPY_HOST_PTR | CL_MEM_READ_ONLY, weightSize, convertedWeights)
+      // new Buffer(CL_MEM_COPY_HOST_PTR | CL_MEM_READ_ONLY, weightSize, convertedWeights)
 
     layers.last.weights :+= bufferWeights
   }

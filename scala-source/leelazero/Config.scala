@@ -16,7 +16,7 @@ object Config {
 
   // these will probably be read from file or come from GTP
   val cfg_max_playouts: Int = 1000    // should come from config
-  val cfg_weightsfile: Option[String] = None // FIXME
+  var cfg_weightsfile: Option[String] = None // None // FIXME
   val cfg_num_threads: Int = Runtime.getRuntime.availableProcessors()  // Should be configured
   val cfg_preffered_gpus: Seq[Int] = Seq()
 

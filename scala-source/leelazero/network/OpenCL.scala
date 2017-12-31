@@ -5,6 +5,8 @@ import jcuda.driver._
 import leelazero.util.Utils.myPrint
 import leelazero.network.OpenCL._
 import leelazero.Config
+import java.nio.charset.Charset
+import Network.FLOAT_SIZE
 import org.jocl.CL._
 import org.jocl.{cl_context_properties, _}
 
@@ -344,7 +346,7 @@ object OpenCL {
     * @param paramName The parameter name
     * @return The value
     */
-  private def getPlatformInfo(platform: cl_platform_id, paramName: Int) = {
+  private def getPlatformInfo(platform: cl_platform_id, paramName: Int): String = {
     val size = new Array[Long](1)
     clGetPlatformInfo(platform, paramName, 0, null, size)
     val buffer = new Array[Byte](size(0).toInt)
@@ -366,19 +368,59 @@ object OpenCL {
     new String(buffer, 0, buffer.length - 1)
   }
 
+  import org.jocl.Sizeof
+  import org.jocl.cl_device_id
+  import java.nio.ByteBuffer
+  import java.nio.ByteOrder
+
   /**
-    * Returns the value of the workgroup info parameter with the given name
+    * Returns the value of the device info parameter with the given name
+    * @param device    The device
+    * @param paramName The parameter name
+    * @return The value
+    */
+  private def getDeviceSize(device: cl_device_id, paramName: Int) = getDeviceSizes(device, paramName, 1)(0)
+
+  /**
+    * The size of the returned data has to depend on the size of a size_t
+    * (either 4 or 8 bytes depending on 32 or 64 bit OS)
+    * @param device    The device
+    * @param paramName The parameter name
+    * @param numValues The number of values
+    * @return values of the device info parameter with the given name
+    */
+  def getDeviceSizes(device: cl_device_id, paramName: Int, numValues: Int): Array[Long] = {
+    val buffer = ByteBuffer.allocate(numValues * Sizeof.size_t).order(ByteOrder.nativeOrder)
+    clGetDeviceInfo(device, paramName, Sizeof.size_t * numValues, Pointer.to(buffer), null)
+    val values = new Array[Long](numValues)
+    if (Sizeof.size_t == 4) {
+      for (i <- 0 until numValues) {
+        values(i) = buffer.getInt(i * Sizeof.size_t)
+      }
+    }
+    else {
+      for (i <- 0 until numValues) {
+        values(i) = buffer.getLong(i * Sizeof.size_t)
+      }
+    }
+    values
+  }
+
+  /**
+    * Returns the value of the workgroup info parameter with the given name.
+    * This method is probably not correct, but not really used for anything importatnt either.
     * @param kernel  The kernel
     * @param device  The device
     * @param paramName The parameter name
     * @return The value
     */
-  private def getWorkGroupInfo(kernel: cl_kernel, device: cl_device_id, paramName: Int) = {
+  private def getWorkGroupInfo(kernel: cl_kernel, device: cl_device_id, paramName: Int): Long = {
+
     val size = new Array[Long](1)
-    clGetKernelWorkGroupInfo(kernel, device, paramName, 0, null, size)
-    val buffer = new Array[Byte](size(0).toInt)
-    clGetKernelWorkGroupInfo(kernel, device, paramName, buffer.length, Pointer.to(buffer), null)
-    new String(buffer, 0, buffer.length - 1)
+    val buffer = new Array[Byte](Sizeof.cl_ulong)
+    val r = clGetKernelWorkGroupInfo(kernel, device, paramName, Sizeof.cl_ulong, Pointer.to(buffer), null)
+    //val s = new String(buffer, 0, buffer.length - 1)
+    Math.abs(r)
   }
 }
 
@@ -389,11 +431,12 @@ object OpenCL {
 class OpenCL {
 
   private var program: cl_program  = _
-  private val openclThreadData: ThreadLocal[ThreadData] = new ThreadLocal[ThreadData]  // thread_local ThreadData opencl_thread_data;
+  private val openclThreadData: ThreadLocal[ThreadData] = new ThreadLocal()
+  openclThreadData.set(new ThreadData())
 
-  var waveFrontSize: Int = 0
-  var maxWorkGroupSize: Int = 0
-  var maxWorkGroupDims: Seq[Int] = _
+  var waveFrontSize: Long = 0
+  var maxWorkGroupSize: Long = 0
+  var maxWorkGroupDims: Array[Long] = _
   var initOk = false
   var context: cl_context = _
   var bestDevice: cl_device_id = _
@@ -425,22 +468,23 @@ class OpenCL {
 
     var bestVersion: Float = 0.0f
     var bestPlatform: cl_platform_id = null
-    var bestVendor: String = ""
     var bestScore: Int = 0
     var foundDevice: Boolean = false
 
-    myPrint(s"Detected $numPlatforms%d OpenCL platforms\n") // should only be one
+    myPrint(f"Detected $numPlatforms%d OpenCL platforms") // should only be one
 
-    val platvers = getPlatformInfo(platform, CL_PLATFORM_VERSION)
-    val platprof = getPlatformInfo(platform, CL_PLATFORM_PROFILE)
-    val platname = getPlatformInfo(platform, CL_PLATFORM_NAME)
-    val platvend = getPlatformInfo(platform, CL_PLATFORM_VENDOR)
-    myPrint(f"Platform version: $platvers%s\n")
-    myPrint(f"Platform profile: $platprof%s\n")
-    myPrint(f"Platform name:    $platname%s\n")
-    myPrint(f"Platform vendor:  $platvend%s\n")
+    val platVersion = getPlatformInfo(platform, CL_PLATFORM_VERSION)
+    val prefixLen = "OpenCL ".length
+    val openClVersion = platVersion.substring(prefixLen, prefixLen + 4)
+    val platProfile = getPlatformInfo(platform, CL_PLATFORM_PROFILE)
+    val platName = getPlatformInfo(platform, CL_PLATFORM_NAME)
+    val platVendor = getPlatformInfo(platform, CL_PLATFORM_VENDOR)
+    myPrint(f"Platform version: $platVersion%s")
+    myPrint(f"Platform profile: $platProfile%s")
+    myPrint(f"Platform name:    $platName%s")
+    myPrint(f"Platform vendor:  $platVendor%s")
 
-    val openclVersion: Float = platvers.toFloat
+    val openclVersion: Float = openClVersion.toFloat
 
     // Initialize the context properties
     val contextProperties = new cl_context_properties
@@ -457,19 +501,19 @@ class OpenCL {
     clGetDeviceIDs(platform, deviceType, numDevices, devices, null)
     for (id <- 0 until numDevices) {
       val device = devices(id)
-      val deviceName = getDeviceInfo(device, CL_DEVICE_NAME)
-      val deciceType = getDeviceInfo(device, CL_DEVICE_TYPE)
+      val deviceName =  getDeviceInfo(device, CL_DEVICE_NAME)
+      val deviceType = getDeviceSize(device, CL_DEVICE_TYPE) //getDeviceInfo(device, CL_DEVICE_TYPE)
       val deviceVendor = getDeviceInfo(device, CL_DEVICE_VENDOR)
       val deviceDriver = getDeviceInfo(device, CL_DRIVER_VERSION)
-      val deviceSpeed = getDeviceInfo(device, CL_DEVICE_MAX_CLOCK_FREQUENCY)
-      val deviceCores = getDeviceInfo(device, CL_DEVICE_MAX_COMPUTE_UNITS)
-      myPrint(f"Device ID:     $id%d\n")
-      myPrint(f"Device name:   $deviceName%s\n")
-      myPrint(f"Device type:   $deviceType%s\n")
-      myPrint(f"Device vendor: $deviceVendor%s\n")
-      myPrint(f"Device driver: $deviceDriver%s\n")
-      myPrint(f"Device speed:  $deviceSpeed%s MHz\n") // was %u
-      myPrint(f"Device cores:  $deviceCores%s CU\n") // was %u
+      val deviceSpeed = getDeviceSize(device, CL_DEVICE_MAX_CLOCK_FREQUENCY) //getDeviceInfo(device, CL_DEVICE_MAX_CLOCK_FREQUENCY)
+      val deviceCores = getDeviceSize(device, CL_DEVICE_MAX_COMPUTE_UNITS)
+      myPrint(f"Device ID:     $id%d")
+      myPrint(f"Device name:   $deviceName%s")
+      myPrint(f"Device type:   $deviceType%s")
+      myPrint(f"Device vendor: $deviceVendor%s")
+      myPrint(f"Device driver: $deviceDriver%s")
+      myPrint(f"Device speed:  $deviceSpeed%s MHz") // was %u
+      myPrint(f"Device cores:  $deviceCores%s CU") // was %u
 
       // assign score, try to find best device (there is probably only one)
       var thisScore: Int = 0
@@ -529,14 +573,14 @@ class OpenCL {
     ensureThreadInitialized()
 
     waveFrontSize = getWorkGroupInfo(openclThreadData.get().convolve3Kernel, bestDevice,
-      CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE).toInt
+      CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE)
     //  openclThreadData.get().convolve3Kernel.getWorkGroupInfo<CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE>(bestDevice)
     myPrint(f"Wavefront/Warp size: $waveFrontSize%d\n")
 
-    maxWorkGroupSize = getDeviceInfo(bestDevice, CL_DEVICE_MAX_WORK_GROUP_SIZE).toInt
-    val gdims = getDeviceInfo(bestDevice, CL_DEVICE_MAX_WORK_ITEM_SIZES)
+    maxWorkGroupSize = getDeviceSize(bestDevice, CL_DEVICE_MAX_WORK_GROUP_SIZE)
+    val gdims = getDeviceSizes(bestDevice, CL_DEVICE_MAX_WORK_ITEM_SIZES, 3)
     println("workGrouDims = " + gdims)
-    maxWorkGroupDims = gdims.split(",").map(_.toInt)
+    maxWorkGroupDims = gdims
 
     myPrint(f"Max workgroup size: $maxWorkGroupSize%d\n")
     myPrint(f"Max workgroup dimensions: ")

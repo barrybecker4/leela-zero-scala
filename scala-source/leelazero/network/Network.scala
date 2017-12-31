@@ -15,7 +15,7 @@ import Network._
 
 /**
   * The neural network - evaluated using the Open Cuda Library (OCL) and OpenBLAS
-  * All static methods - shoudl they be?
+  * All static methods - should they be?
   */
 object Network {
   val ENSEMBLE_DIRECT: Ensemble = 1
@@ -70,10 +70,10 @@ object Network {
 class Network {
 
   // Input + residual block tower
-  private var convWeights: Seq[Seq[NetWeight]] = _
-  private var convBiases: Seq[Seq[NetWeight]] = _
-  private var batchNormMeans: Seq[Seq[NetWeight]] = _
-  private var batchNormVariances: Seq[Seq[NetWeight]] = _
+  private var convWeights: Seq[Seq[NetWeight]] = Seq()
+  private var convBiases: Seq[Seq[NetWeight]] = Seq()
+  private var batchNormMeans: Seq[Seq[NetWeight]] = Seq()
+  private var batchNormVariances: Seq[Seq[NetWeight]] = Seq()
 
   // Policy head
   private var convPolicyW: Seq[NetWeight] = _
@@ -125,7 +125,7 @@ class Network {
 
   // ifdef USE_OPENCL
   private def initialize(): Unit = {
-    myPrint("Initializing OpenCL\n")
+    myPrint("Initializing OpenCL")
     OPEN_CL.initialize()
 
     // Count size of the network
@@ -137,7 +137,7 @@ class Network {
       System.exit(0)
     }
 
-    var lines = Source.fromFile(Config.cfg_weightsfile.get).getLines
+    var lines = Source.fromFile(Config.cfg_weightsfile.get).getLines.toList
     for (line <- lines) {
       // First line is the file format version id
       if (lineCount == 0) {
@@ -172,12 +172,13 @@ class Network {
     // Re-read file and process
     val plainConvLayers = 1 + (residualBlocks * 2)
     val plainConvWts = plainConvLayers * 4
+    myPrint("plainConvWts = $plainConvWts")
     lineCount = 0
     lines = lines.drop(1) // skip the file format id on first line
 
     for (line <- lines) {
-      //var weight: Float = 0
       val weights: Seq[NetWeight] = line.split(" ").map(_.toFloat)
+      println("num weights in line is " + weights.length)
 
       if (lineCount < plainConvWts) {
         if (lineCount % 4 == 0) {
@@ -195,39 +196,39 @@ class Network {
         convPolicyB = weights
       } else if (lineCount == plainConvWts + 2) {
         assert(weights.length == 2)
-        for (i <- 0 to 1) bnPolicyW1(i) = weights(i) // std::copy(begin(weights), end(weights), begin(bn_pol_w1))
+        for (i <- bnPolicyW1.indices) bnPolicyW1(i) = weights(i) // std::copy(begin(weights), end(weights), begin(bn_pol_w1))
       } else if (lineCount == plainConvWts + 3) {
-        for (i <- 0 to 1) bnPolicyW2(i) = weights(i) // std::copy(begin(weights), end(weights), begin(bn_pol_w2))
+        for (i <- bnPolicyW2.indices) bnPolicyW2(i) = weights(i) // std::copy(begin(weights), end(weights), begin(bn_pol_w2))
       } else if (lineCount == plainConvWts + 4) {
         assert(weights.length == IP_POLICY_W_LEN)
-        for (i <- 0 to weights.length) ipPolicyW(i) = weights(i) // std::copy(weights, begin(ip_pol_w))
+        for (i <- weights.indices) ipPolicyW(i) = weights(i) // std::copy(weights, begin(ip_pol_w))
       } else if (lineCount == plainConvWts + 5) {
         assert(weights.length == IP_POLICY_B_LEN)
-        for (i <- 0 to weights.length) ipPolicyB(i) = weights(i) // std::copy(weights), begin(ip_pol_b))
+        for (i <- weights.indices) ipPolicyB(i) = weights(i) // std::copy(weights), begin(ip_pol_b))
       } else if (lineCount == plainConvWts + 6) {
         convValW = weights     // std::move(weights)
       } else if (lineCount == plainConvWts + 7) {
         convValB = weights     // std::move(weights)
       } else if (lineCount == plainConvWts + 8) {
         assert(weights.length == 1)
-        for (i <- 0 to weights.length) bnValW1(i) = weights(i)  //std::copy(weights, begin(bn_val_w1))
+        for (i <- weights.indices) bnValW1(i) = weights(i)  //std::copy(weights, begin(bn_val_w1))
       } else if (lineCount == plainConvWts + 9) {
         assert(weights.length == 1)
-        for (i <- 0 to weights.length) bnValW2(i) = weights(i) // std::copy(weights, begin(bn_val_w2))
+        for (i <- weights.indices) bnValW2(i) = weights(i) // std::copy(weights, begin(bn_val_w2))
       } else if (lineCount == plainConvWts + 10) {
         assert(weights.length == IP1_VAL_W_LEN)
-        for (i <- 0 to weights.length) ip1ValW(i) = weights(i) // std::copy(weights, begin(ip1_val_w))
+        for (i <- weights.indices) ip1ValW(i) = weights(i) // std::copy(weights, begin(ip1_val_w))
       } else if (lineCount == plainConvWts + 11) {
         assert(weights.length == IP1_VAL_B_LEN)
-        for (i <- 0 to weights.length) ip1ValB(i) = weights(i) // std::copy(weights, begin(ip1_val_b))
+        for (i <- weights.indices) ip1ValB(i) = weights(i) // std::copy(weights, begin(ip1_val_b))
       } else if (lineCount == plainConvWts + 12) {
         assert(weights.length == IP2_VAL_W_LEN)
-        for (i <- 0 to weights.length) ip2ValW(i) = weights(i) //std::copy(weights), begin(ip2_val_w))
+        for (i <- weights.indices) ip2ValW(i) = weights(i) //std::copy(weights), begin(ip2_val_w))
       } else if (lineCount == plainConvWts + 13) {
         assert(weights.length == 1)
-        for (i <- 0 to weights.length) ip2ValB(i) = weights(i)   // std::copy(weights, begin(ip2_val_b))
+        for (i <- weights.indices) ip2ValB(i) = weights(i)   // std::copy(weights, begin(ip2_val_b))
       }
-      lineCount
+      lineCount += 1
     }
 
     // input
