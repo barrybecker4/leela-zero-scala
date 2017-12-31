@@ -431,8 +431,7 @@ object OpenCL {
 class OpenCL {
 
   private var program: cl_program  = _
-  private val openclThreadData: ThreadLocal[ThreadData] = new ThreadLocal()
-  openclThreadData.set(new ThreadData())
+  private val openclThreadData: LocalThreadData = new LocalThreadData()
 
   var waveFrontSize: Long = 0
   var maxWorkGroupSize: Long = 0
@@ -592,7 +591,7 @@ class OpenCL {
   }
 
   def ensureThreadInitialized(): Unit = {
-    val threadData = openclThreadData.get()
+    val threadData: ThreadData = openclThreadData.get()
     if (!threadData.isInitialized) {
       // Make kernels
       threadData.convolve1Kernel = clCreateKernel(program, "convolve1", null)

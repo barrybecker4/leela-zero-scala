@@ -102,7 +102,7 @@ object SgfTree {
 class SgfTree {
 
   private var initialized = false
-  private var gameHistory: GameHistory = _
+  var gameHistory: GameHistory = _
   private var winner: Byte = INVALID // no winner initially
   private var children: Seq[SgfTree] = Seq()
   private var properties = Map[String, String]()

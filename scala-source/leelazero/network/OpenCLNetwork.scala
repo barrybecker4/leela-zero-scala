@@ -1,5 +1,7 @@
 package leelazero.network
 
+import java.nio.{ByteBuffer, ByteOrder}
+
 import leelazero.Config
 import leelazero.network.Network.{BOARD_SIZE, _}
 import org.jocl.CL._
@@ -141,6 +143,7 @@ class OpenCLNetwork {
     }
 
     val finalSize = layers.last.outputs * onePlane
+    //queue.enqueueReadBuffer(inBuffer, CL_FALSE, 0, finalSize, output.data());
     clEnqueueReadBuffer(queue, bufs._1, CL_FALSE, 0, finalSize, Pointer.to(output), 0, null, null) // ?
 
     clFinish(queue)
@@ -180,7 +183,8 @@ class OpenCLNetwork {
 
       // Produce channel * output planes and merge them at the end
       val mergeSize = (channels >> channelShift) * outSize
-      assert(mergeSize <= clGetMemObjectInfo(bufferMerge, CL_MEM_SIZE, 4, null, null))
+      val memSize = getClMemSize(bufferMerge)
+      assert(mergeSize <= memSize)
     }
 
     // Copy the rows locally
@@ -243,6 +247,17 @@ class OpenCLNetwork {
       clEnqueueNDRangeKernel(queue, mergeKernel, 1, null/*cl::NullRange*/,
         globalWorkSize, localWorkSize, 0, null, null)
     } // throw error
+  }
+
+  private def getClMemSize(mem: cl_mem): Long = {
+    //val memSize = clGetMemObjectInfo(mem, CL_MEM_SIZE, 4, null, null) // bufferMerge.getInfo<CL_MEM_SIZE>()
+    val buffer = ByteBuffer.allocate(Sizeof.size_t).order(ByteOrder.nativeOrder)
+    clGetMemObjectInfo(mem, CL_MEM_SIZE, Sizeof.size_t, Pointer.to(buffer), null)
+    val values = new Array[Long](1)
+    for (i <- 0 until 1) {
+      values(i) = buffer.getLong(i * Sizeof.size_t)
+    }
+    values(0)
   }
 
   def batchNorm(outputs: Int, channelSize: Int,

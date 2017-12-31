@@ -1,5 +1,7 @@
 package leelazero.network
 
+import java.nio.ByteBuffer
+
 import leelazero.board.FastBoard._
 import leelazero.util.Utils.myPrint
 import leelazero._
@@ -32,7 +34,7 @@ object Network {
 
   val OPEN_CL: OpenCL = new OpenCL()
   val OPEN_CL_NET: OpenCLNetwork = new OpenCLNetwork()
-  val OPEN_CL_THREAD_DATA: ThreadLocal[ThreadData] = new ThreadLocal[ThreadData]
+  val OPEN_CL_THREAD_DATA = new LocalThreadData()
 
   val IP_POLICY_W_LEN = 261364
   val IP_POLICY_B_LEN = 362
@@ -60,7 +62,7 @@ object Network {
   }
 
   private def createNNPlanes(): NNPlanes = {
-    for (i <- 0 to 18) yield new mutable.BitSet() // 19*19
+    for (i <- 0 until 18) yield new mutable.BitSet() // 19*19
   }
 
   private def lambdaReLU(value: Float): Float = if (value > 0.0f) value else 0.0f
@@ -98,7 +100,9 @@ class Network {
 
   initialize()
 
-  def benchmark(history: GameHistory): Unit = {
+  def benchmark(history: GameHistory): Unit = myPrint(getBenchmarkResult(history))
+
+  private[network] def getBenchmarkResult(history: GameHistory): String = {
     val BENCH_AMOUNT = 1600
     val cpus = Config.cfg_num_threads
     val itersPerThread: Int = (BENCH_AMOUNT + (cpus - 1)) / cpus
@@ -120,7 +124,7 @@ class Network {
     val end = System.currentTimeMillis()
     val timeDiffSecs = Timing.timeDiff(start, end)/100.0
     val numEvals = (BENCH_AMOUNT / timeDiffSecs.toFloat).toInt
-    myPrint(f"$BENCH_AMOUNT%5d evaluations in $timeDiffSecs%5.2f seconds -> $numEvals%d n/s\n")
+    f"$BENCH_AMOUNT%5d evaluations in $timeDiffSecs%5.2f seconds -> $numEvals%d n/s\n"
   }
 
   // ifdef USE_OPENCL
@@ -178,7 +182,6 @@ class Network {
 
     for (line <- lines) {
       val weights: Seq[NetWeight] = line.split(" ").map(_.toFloat)
-      println("num weights in line is " + weights.length)
 
       if (lineCount < plainConvWts) {
         if (lineCount % 4 == 0) {
@@ -376,14 +379,17 @@ class Network {
   private def getScoredMovesInternal(history: GameHistory, planes: NNPlanes, rotation: Int): NetResult = {
 
     assert(rotation >= 0 && rotation <= 7)
-    assert(INPUT_CHANNELS == planes.length)
+    assert(INPUT_CHANNELS == planes.length, s"Expected $INPUT_CHANNELS input channels, but got: ${planes.length}")
     val width = BOARD_SIZE
     val height = BOARD_SIZE
     val convolveChannels = convPolicyW.length / convPolicyB.length
 
     // Data layout is input_data[(c * height + h) * width + w]
     val inputData = Array.ofDim[NetWeight](INPUT_CHANNELS * width * height) // Array.ofDim[Int](INPUT_CHANNELS * width * height)
-    val outputData = Array.ofDim[NetWeight](convolveChannels * width * height) //std::vector<net_t> output_data(convolve_channels * width * height)
+    val outputData = Array.ofDim[NetWeight](convolveChannels * width * height)
+      //ByteBuffer.allocateDirect(convolveChannels * width * height * FLOAT_SIZE).asFloatBuffer().array
+      // Array.ofDim[NetWeight](convolveChannels * width * height)
+      // std::vector<net_t> output_data(convolve_channels * width * height)
     val policyData1 = Array.ofDim[NetWeight](2 * width * height)
     val policyData2 = Array.ofDim[NetWeight](2 * width * height)
     val valueData1 = Array.ofDim[NetWeight](1 * width * height)
