@@ -18,6 +18,11 @@ class NetworkSuite extends FunSuite {
   test("get benchmark") {
     val tree: SgfTree = SgfParser.loadFromFile("../sgf/games/simple_match.sgf")
     val gameHistory = tree.gameHistory
-    assertResult("--") {Network.getInstance().getBenchmarkResult(gameHistory)}
+    val result = Network.getInstance().getBenchmarkResult(gameHistory)
+
+    println("becnchmark result = " + result)
+    assertResult(1600) { result.numEvaluations }
+    assert(result.timeDiffSeconds < 10 )
+    assert(result.evalsPerSecond > 1000 )
   }
 }

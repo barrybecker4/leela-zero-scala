@@ -25,7 +25,7 @@ object Im2Col {
     var outputIdx = 0
     //const net_t* data_im = input.data()
     //float* data_col = output.data()
-    println("num channels = " + channels)
+    //println("num channels = " + channels)
 
     for (channel <- (channels - 1) to 0 by -1) {
       for (kernelRow <- 0 until filterSize) {

@@ -14,7 +14,6 @@ import scala.collection.mutable
 import scala.io.Source
 import scala.util.Random
 import Network._
-import org.bytedeco.javacpp.{Loader, mkl_rt}
 
 
 /**
@@ -25,7 +24,7 @@ object Network {
 
   val ENSEMBLE_DIRECT: Ensemble = 1
   val ENSEMBLE_RANDOM_ROTATION: Ensemble = 2
-
+  val BENCH_AMOUNT = 1600  // number of evaluations to do
 
   import java.util.StringTokenizer
 
@@ -61,6 +60,10 @@ object Network {
   type NetResult = (Seq[ScoredNode], Float)
   type BoardPlane = mutable.BitSet
   type NNPlanes = Seq[BoardPlane]
+
+  case class BenchmarkResult(numEvaluations: Int, timeDiffSeconds: Double, evalsPerSecond: Int) {
+    override def toString = f"$numEvaluations%5d evaluations in $timeDiffSeconds%5.2f seconds -> $evalsPerSecond%d n/s\n"
+  }
 
   /** @return singleton instance. Initialized lazily */
   def getInstance(): Network = {
@@ -146,12 +149,12 @@ class Network {
 
   initialize()
 
-  def benchmark(history: GameHistory): Unit = myPrint(getBenchmarkResult(history))
+  def benchmark(history: GameHistory): Unit = myPrint(getBenchmarkResultString(history))
+  private[network] def getBenchmarkResultString(history: GameHistory): String = getBenchmarkResult(history).toString
+  private[network] def getBenchmarkResult(history: GameHistory, numEvals: Int = BENCH_AMOUNT): BenchmarkResult = {
 
-  private[network] def getBenchmarkResult(history: GameHistory): String = {
-    val BENCH_AMOUNT = 1600
     val cpus = Config.cfg_num_threads
-    val itersPerThread: Int = (BENCH_AMOUNT + (cpus - 1)) / cpus
+    val itersPerThread: Int = (numEvals + (cpus - 1)) / cpus
     val start = System.currentTimeMillis()
 
     class Worker() extends Runnable {
@@ -169,8 +172,8 @@ class Network {
 
     val end = System.currentTimeMillis()
     val timeDiffSecs = Timing.timeDiff(start, end)/100.0
-    val numEvals = (BENCH_AMOUNT / timeDiffSecs.toFloat).toInt
-    f"$BENCH_AMOUNT%5d evaluations in $timeDiffSecs%5.2f seconds -> $numEvals%d n/s\n"
+    val numEvalsPerSec = (numEvals / timeDiffSecs.toFloat).toInt
+    BenchmarkResult(numEvals, timeDiffSecs, numEvalsPerSec)
   }
 
   // ifdef USE_OPENCL
@@ -449,7 +452,7 @@ class Network {
     for (c <- 0 until INPUT_CHANNELS) {
         for (h <- 0 until height) {
             for (w <- 0 until width) {
-              val rotIdx = rotateNnIdx(h * BOARD_SIZE + w, rotation)
+              val rotIdx = rotateNNIdx(h * BOARD_SIZE + w, rotation)
               inputData(ct) = if (planes(c)(rotIdx)) 1 else 0
               ct +=1
             }
@@ -486,7 +489,7 @@ class Network {
     for (idx <- outputs.indices) {
         if (idx < BOARD_SQ) {
             val value = outputs(idx)
-            val rotIdx = rotateNnIdx(idx, rotation)
+            val rotIdx = rotateNNIdx(idx, rotation)
             val x = rotIdx % BOARD_SIZE
             val y = rotIdx / BOARD_SIZE
             val rotVtx = state.getBoard.getVertex(x, y)
@@ -604,7 +607,7 @@ class Network {
   }
 
   /** @return a new index in the range [0, 19*19) */
-  private def rotateNnIdx(vertex: Int, symmetry: Int): Int = {
+  private def rotateNNIdx(vertex: Int, symmetry: Int): Int = {
     assert(vertex >= 0 && vertex < BOARD_SQ)
     assert(symmetry >= 0 && symmetry < 8)
     var symm = symmetry
@@ -630,7 +633,7 @@ class Network {
       newx = 19 - x - 1
       newy = y
     } else {
-      assert(symmetry == 3)
+      assert(symm == 3)
       newx = 19 - x - 1
       newy = 19 - y - 1
     }
