@@ -1,6 +1,6 @@
 package leelazero.network
 
-import java.nio.{ByteBuffer, ByteOrder}
+import java.nio.{ByteBuffer, ByteOrder, FloatBuffer}
 
 import leelazero.Config
 import leelazero.network.Network.{BOARD_SIZE, _}
@@ -70,7 +70,7 @@ class OpenCLNetwork {
     layers.last.weights :+= bufferWeights
   }
 
-  def forward(input: Array[NetWeight], output: Array[NetWeight]): Unit = {
+  def forward(input: Array[NetWeight], output: FloatBuffer): Unit = {
     val onePlane = BOARD_SQ * FLOAT_SIZE /*sizeof(NetWeight)*/
 
     OPEN_CL.ensureThreadInitialized()

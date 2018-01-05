@@ -1,5 +1,7 @@
 package leelazero.network
 
+import java.nio.FloatBuffer
+
 import leelazero.network.Network._
 
 /**
@@ -10,7 +12,7 @@ import leelazero.network.Network._
   */
 object Im2Col {
 
-  def im2Col(filterSize: Int, channels: Int, input: Seq[NetWeight], output: Array[Float]): Unit = {
+  def im2Col(filterSize: Int, channels: Int, input: FloatBuffer, output: Array[Float]): Unit = {
     val height = BOARD_SIZE
     val width = BOARD_SIZE
     val channelSize = height * width
@@ -23,18 +25,20 @@ object Im2Col {
     var outputIdx = 0
     //const net_t* data_im = input.data()
     //float* data_col = output.data()
+    println("num channels = " + channels)
 
-    for (channel <- channels - 1 to 0 by -1) {
-      inputIdx += channelSize
+    for (channel <- (channels - 1) to 0 by -1) {
       for (kernelRow <- 0 until filterSize) {
         for (kernelCol <- 0 until filterSize) {
-          var inputRow = -pad + kernelRow
+          var inputRow = kernelRow - pad
           for (outputRows <- outputH - 1 to 0 by -1) {
             if (inputRow < height) {
-              var inputCol = -pad + kernelCol
+              var inputCol = kernelCol - pad
               for (outputCol <- outputW - 1 to 0 by -1) {
                 if (inputCol < width) {
-                  output(outputIdx) = input(inputIdx + inputRow * width + inputCol)
+                  val idx = inputIdx + inputRow * width + inputCol
+                  //println("input size = " + input.capacity() + " idx = " + idx + s" $inputIdx + $inputRow * $width + $inputCol")
+                  output(outputIdx) = input.get(idx)
                   outputIdx += 1
                 } else {
                   output(outputIdx) = 0
@@ -51,6 +55,7 @@ object Im2Col {
           }
         }
       }
+      inputIdx += channelSize
     }
   }
 }

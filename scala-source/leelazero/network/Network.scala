@@ -1,6 +1,7 @@
 package leelazero.network
 
-import java.nio.ByteBuffer
+import java.nio.file.Path
+import java.nio.{ByteBuffer, FloatBuffer}
 
 import leelazero.board.FastBoard._
 import leelazero.util.Utils.myPrint
@@ -13,6 +14,7 @@ import scala.collection.mutable
 import scala.io.Source
 import scala.util.Random
 import Network._
+import org.bytedeco.javacpp.{Loader, mkl_rt}
 
 
 /**
@@ -20,8 +22,15 @@ import Network._
   * All static methods - should they be?
   */
 object Network {
+
   val ENSEMBLE_DIRECT: Ensemble = 1
   val ENSEMBLE_RANDOM_ROTATION: Ensemble = 2
+
+
+  import java.util.StringTokenizer
+
+  showLibraryPath()
+  loadNativeLibs()
 
   // singleton instance. Access with getInstance
   private var instance: Option[Network] = None
@@ -66,6 +75,43 @@ object Network {
   }
 
   private def lambdaReLU(value: Float): Float = if (value > 0.0f) value else 0.0f
+
+  /**
+    * Print the java library path. Make sure the MKL dlls are in it
+    * for example, include E:/apps/IntelSWTools/compilers_and_libraries_2018.1.156/windows/redist/intel64_win/mkl
+    * Installed from https://software.intel.com/en-us/mkl
+    * You can also use "java -XshowSettings:properties -version" (to see the contents of the path)
+    */
+  private def showLibraryPath(): Unit = {
+    val property: String = System.getProperty("java.library.path")
+    val parser = new StringTokenizer(property, ";")
+    while ( {
+      parser.hasMoreTokens
+    }) System.err.println(parser.nextToken)
+  }
+
+  /** Make sure we load native dlls in reverse dependency order */
+  private def loadNativeLibs(): Unit = {
+    /* This could be used to launch the dependency view if deps cannot be found. */
+    //try {
+      // mkl is intel's math kernel library
+      val libs = Seq("ntdll", "tbbmalloc", "tbb", "kernelbase", "kernel32", "libimalloc",
+      "1041/mkl_msg", "../compiler/libiomp5md", "../compiler/libiompstubs5md",
+      "mkl_def", "mkl_core", "mkl_mc", "mkl_mc3",
+      "mkl_sequential", "mkl_vml_avx", "mkl_vml_avx2", "mkl_vml_avx512", "mkl_vml_avx512_mic",
+      "mkl_avx", "mkl_avx2", "mkl_avx512", "mkl_avx512_mic",
+      "mkl_vml_cmpt", "mkl_vml_def", "mkl_vml_mc", "mkl_vml_mc2", "mkl_vml_mc3",
+      "mkl_tbb_thread", "mkl_intel_thread",
+      "mkl_rt", "jnimkl_rt")
+      libs.foreach(System.loadLibrary)
+//    } catch {
+//      case usle: UnsatisfiedLinkError =>
+//        println("UnsatisfiedLinkError\n" + usle.getMessage)
+//        //val path: String = Loader.cacheResource(mkl_rt.class, "windows-x86_64/jnimkl_rt.dll").getPath()
+//        //new ProcessBuilder("c:/path/to/depends.exe", path).start().waitFor()
+//      case e: Exception => println("Unexpected exception: " + e)
+//    }
+  }
 }
 
 
@@ -176,7 +222,7 @@ class Network {
     // Re-read file and process
     val plainConvLayers = 1 + (residualBlocks * 2)
     val plainConvWts = plainConvLayers * 4
-    myPrint("plainConvWts = $plainConvWts")
+    myPrint(s"plainConvWts = $plainConvWts")
     lineCount = 0
     lines = lines.drop(1) // skip the file format id on first line
 
@@ -259,7 +305,7 @@ class Network {
   /** @param output this gets populated */
   //#ifdef USE_BLAS
   def convolve(filterSize: Int, outputs: Int,  // template params?
-               input: Seq[NetWeight], weights: Seq[NetWeight], biases: Seq[NetWeight],
+               input: FloatBuffer, weights: Seq[NetWeight], biases: Seq[NetWeight],
                output: Array[NetWeight]): Unit = {
     // fixed for 19x19
     val width = BOARD_SIZE
@@ -289,7 +335,7 @@ class Network {
       outputs, boardSquares, filterDim,
       1.0f, weights.toArray, filterDim,
       col, boardSquares,
-      0.0f, output.toArray, boardSquares)
+      0.0f, output, boardSquares)
 
     for (o <- 0 until outputs) {
       for (b <- 0 until boardSquares) {
@@ -386,8 +432,8 @@ class Network {
 
     // Data layout is input_data[(c * height + h) * width + w]
     val inputData = Array.ofDim[NetWeight](INPUT_CHANNELS * width * height) // Array.ofDim[Int](INPUT_CHANNELS * width * height)
-    val outputData = Array.ofDim[NetWeight](convolveChannels * width * height)
-      //ByteBuffer.allocateDirect(convolveChannels * width * height * FLOAT_SIZE).asFloatBuffer().array
+    val outputData =
+      ByteBuffer.allocateDirect(convolveChannels * width * height * FLOAT_SIZE).asFloatBuffer()
       // Array.ofDim[NetWeight](convolveChannels * width * height)
       // std::vector<net_t> output_data(convolve_channels * width * height)
     val policyData1 = Array.ofDim[NetWeight](2 * width * height)

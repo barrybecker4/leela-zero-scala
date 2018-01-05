@@ -149,9 +149,13 @@ dependencies {
     compile group: 'org.jcuda', name: 'jcusparse-natives', classifier: classifier, version: jCudaVersion
     compile group: 'org.jcuda', name: 'jcurand-natives', classifier: classifier, version: jCudaVersion
 
-    // For MKL libs. Do we need it?
-    compile group: 'org.bytedeco.javacpp-presets', name: 'mkl-platform', version: '2017.3-1.3'
-    compile group: 'org.bytedeco.javacpp-presets', name: 'mkl', version: '2017.3-1.3'
+    // For MKL libs.
+    compile 'org.bytedeco.javacpp-presets:mkl-platform:2017.3-1.3'
+    compile 'org.bytedeco.javacpp-presets:mkl:2017.3-1.3'
+    //runtime 'org.bytedeco.javacpp-presets:mkl:2017.3-1.3'
+    //compile 'org.bytedeco.javacpp-presets:cuda:9.0-7.0-1.3'
+    //compile 'org.bytedeco.javacpp-presets:opencv:3.2.0-1.3'
+    //compile 'org.bytedeco.javacpp-presets:openblas:0.2.20-1.3'
     //compile 'org.bytedeco.javacpp-presets:mkl-platform:2018.1-1.3.4-SNAPSHOT'
     //compile 'org.bytedeco.javacpp-presets.mkl:mkl:1.3.4-SNAPSHOT'
 }
