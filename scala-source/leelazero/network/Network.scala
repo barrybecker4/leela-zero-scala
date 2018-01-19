@@ -2,14 +2,12 @@ package leelazero.network
 
 import java.nio.file.Path
 import java.nio.{ByteBuffer, FloatBuffer}
-
 import leelazero.board.FastBoard._
 import leelazero.util.Utils.myPrint
 import leelazero._
 import leelazero.board.{FastBoard, FastBoardSerializer, GameHistory, KoState}
 import leelazero.util.Timing
 import org.bytedeco.javacpp.mkl_rt._
-
 import scala.collection.mutable
 import scala.io.Source
 import scala.util.Random
@@ -28,6 +26,7 @@ object Network {
 
   import java.util.StringTokenizer
 
+  // Depends on native c++ libraries
   showLibraryPath()
   loadNativeLibs()
 
@@ -37,7 +36,7 @@ object Network {
   // File format version
   private val FORMAT_VERSION = 1
   private val INPUT_CHANNELS = 18
-  private var RND = new Random()
+  private val RND = new Random()
   RND.setSeed(1)
 
   val OPEN_CL: OpenCL = new OpenCL()
@@ -62,7 +61,8 @@ object Network {
   type NNPlanes = Seq[BoardPlane]
 
   case class BenchmarkResult(numEvaluations: Int, timeDiffSeconds: Double, evalsPerSecond: Int) {
-    override def toString = f"$numEvaluations%5d evaluations in $timeDiffSeconds%5.2f seconds -> $evalsPerSecond%d n/s\n"
+    override def toString =
+      f"$numEvaluations%5d evaluations in $timeDiffSeconds%5.2f seconds -> $evalsPerSecond%d n/s\n"
   }
 
   /** @return singleton instance. Initialized lazily */
@@ -73,9 +73,8 @@ object Network {
     instance.get
   }
 
-  private def createNNPlanes(): NNPlanes = {
+  private def createNNPlanes(): NNPlanes =
     for (i <- 0 until 18) yield new mutable.BitSet() // 19*19
-  }
 
   private def lambdaReLU(value: Float): Float = if (value > 0.0f) value else 0.0f
 
@@ -107,13 +106,13 @@ object Network {
       "mkl_tbb_thread", "mkl_intel_thread",
       "mkl_rt", "jnimkl_rt")
       libs.foreach(System.loadLibrary)
-//    } catch {
-//      case usle: UnsatisfiedLinkError =>
-//        println("UnsatisfiedLinkError\n" + usle.getMessage)
-//        //val path: String = Loader.cacheResource(mkl_rt.class, "windows-x86_64/jnimkl_rt.dll").getPath()
-//        //new ProcessBuilder("c:/path/to/depends.exe", path).start().waitFor()
-//      case e: Exception => println("Unexpected exception: " + e)
-//    }
+      //    } catch {
+      //      case usle: UnsatisfiedLinkError =>
+      //        println("UnsatisfiedLinkError\n" + usle.getMessage)
+      //        //val path: String = Loader.cacheResource(mkl_rt.class, "windows-x86_64/jnimkl_rt.dll").getPath()
+      //        //new ProcessBuilder("c:/path/to/depends.exe", path).start().waitFor()
+      //      case e: Exception => println("Unexpected exception: " + e)
+      //    }
   }
 }
 
@@ -321,6 +320,7 @@ class Network {
 
     val col = Array.ofDim[NetWeight](filterDim * width * height)
     Im2Col.im2Col(filterSize, inputChannels, input, col)
+    //println("out " + col.mkString(", "))
 
     // Weight shape (output, input, filterSize, filterSize)
     // 96 22 3 3
@@ -410,7 +410,7 @@ class Network {
       return result
     }
 
-    var planes: NNPlanes = gatherFeatures(history)
+    val planes: NNPlanes = gatherFeatures(history)
 
     if (ensemble == ENSEMBLE_DIRECT) {
       assert(rotation >= 0 && rotation <= 7)
@@ -563,32 +563,36 @@ class Network {
     var blackToMove: BoardPlane = planes(16)
     var whiteToMove: BoardPlane = planes(17)
 
-    var toMove: Int = history.getCurrentState.getBoard.getToMove
-    var whitesMove = toMove == WHITE
+    val toMove: Int = history.getCurrentState.getBoard.getToMove
+    val whitesMove = toMove == WHITE
+    val allPossible = mutable.BitSet(1 to BOARD_SQ: _*)
     if (whitesMove) {
-        whiteToMove ++= mutable.BitSet(1 to BOARD_SQ: _*)
+        whiteToMove ++= allPossible
     } else {
-        blackToMove ++= mutable.BitSet(1 to BOARD_SQ: _*)
+        blackToMove ++= allPossible
     }
 
     // Go back in time, fill history boards
     var backtracks: Int = 0
     var h = 0
     var done = false
+
     while (h < 8 && !done) {
       // collect white, black occupation planes
+      val board = history.getCurrentState.getBoard
+      //board.displayBoard()       // always empty?
       for (j <- 0 until BOARD_SIZE) {
           for (i <- 0 until BOARD_SIZE) {
-              val vtx: Short = history.getCurrentState.getBoard.getVertex(i, j)
-              val color: Byte = history.getCurrentState.getBoard.getSquare(vtx)
-              val idx: Int = j * BOARD_SIZE + i
-              if (color != EMPTY) {
-                  if (color == toMove) {
-                      planes(ourOffset + h)(idx) = true
-                  } else {
-                      planes(theirOffset + h)(idx) = true
-                  }
-              }
+            val vtx: Short = board.getVertex(i, j)
+            val color: Byte = board.getSquare(vtx)
+            val idx: Int = j * BOARD_SIZE + i
+            if (color != EMPTY) {
+                if (color == toMove) {
+                    planes(ourOffset + h)(idx) = true
+                } else {
+                    planes(theirOffset + h)(idx) = true
+                }
+            }
           }
       }
       if (!history.undoMove()) {
