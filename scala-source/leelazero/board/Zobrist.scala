@@ -49,25 +49,22 @@ class Zobrist(size: Short, seed: Long = SEED) {
   }*/
 
   private def init(): Unit = {
-    def nextR() = rand.nextInt().toLong
+    def nextR() = rand.nextLong()
 
     for (i <- 0 until NUM_REGULAR) {
       for (j <- 0 until maxSq) {
-        zobrist(i)(j)  = nextR << 32 //((uint64)rng.randuint32()) << 32
-        zobrist(i)(j) ^= nextR       //(uint64)rng.randuint32()
+        zobrist(i)(j)  = nextR()
       }
     }
 
     for (i <- 0 until 2) {
       for (j <- 0 until 2 * maxSq) {
-        zobristPristine(i)(j)  = nextR << 32
-        zobristPristine(i)(j) ^= nextR
+        zobristPristine(i)(j)  = nextR()
       }
     }
 
     for (i <- 0 until NUM_PASSES) {
-      zobristPass(i) = nextR << 32
-      zobristPass(i) ^= nextR
+      zobristPass(i) = nextR()
     }
   }
 }
